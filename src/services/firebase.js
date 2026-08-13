@@ -14,5 +14,11 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+// Aplikasi utama
 export const auth = getAuth(app);
-export const db = getDatabase(app); 
+export const db = getDatabase(app);
+
+// Aplikasi sekunder (khusus untuk fitur Admin mendaftarkan Siswa baru, agar Admin tidak otomatis ter-logout oleh Firebase)
+const secondaryApp = initializeApp(firebaseConfig, 'SecondaryApp');
+export const secondaryAuth = getAuth(secondaryApp); 
