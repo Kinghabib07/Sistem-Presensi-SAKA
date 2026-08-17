@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../services/firebase';
-import { ref, onValue, push, set, update, remove } from 'firebase/database';
-import { Trash2, Edit3, Users, UserPlus, ArrowRightLeft, UserX, UserCheck } from 'lucide-react';
+import { ref, onValue, push, set, update } from 'firebase/database';
+import { Trash2, Edit3, Users, UserPlus, UserX, UserCheck, Search, CheckSquare, Square } from 'lucide-react';
 
 export default function KelolaKelas() {
   const [kelasList, setKelasList] = useState([]);
@@ -21,6 +21,30 @@ export default function KelolaKelas() {
   // Modal Tambah/Pindah Siswa ke Kelas State
   const [modalTambahSiswaOpen, setModalTambahSiswaOpen] = useState(false);
   const [selectedSiswaIds, setSelectedSiswaIds] = useState([]);
+  const [searchSiswaQuery, setSearchSiswaQuery] = useState('');
+
+  // Modal Alert / Confirm State (Pengganti alert & window.confirm bawaan browser)
+  const [modalAlertOpen, setModalAlertOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertTitle, setAlertTitle] = useState('Informasi');
+
+  const [modalConfirmOpen, setModalConfirmOpen] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState('Konfirmasi');
+  const [confirmMessage, setConfirmMessage] = useState('');
+  const [onConfirmAction, setOnConfirmAction] = useState(null);
+
+  const showAlert = (message, title = 'Informasi') => {
+    setAlertMessage(message);
+    setAlertTitle(title);
+    setModalAlertOpen(true);
+  };
+
+  const showConfirm = (message, action, title = 'Konfirmasi') => {
+    setConfirmMessage(message);
+    setConfirmTitle(title);
+    setOnConfirmAction(() => action);
+    setModalConfirmOpen(true);
+  };
 
   useEffect(() => {
     // 1. Ambil data kelas
@@ -37,7 +61,7 @@ export default function KelolaKelas() {
       }
     });
 
-    // 2. Ambil data siswa untuk hitung jumlah anggota & manajemen kelas siswa
+    // 2. Ambil data siswa
     const usersRef = ref(db, 'users');
     const unsubUsers = onValue(usersRef, (snapshot) => {
       const data = snapshot.val();
@@ -64,17 +88,22 @@ export default function KelolaKelas() {
     
     // Cek duplikat
     if (kelasList.find(k => k.nama.toLowerCase() === newKelas.trim().toLowerCase())) {
-      alert('Nama kelas ini sudah ada!');
+      showAlert('Nama kelas ini sudah ada!', 'Peringatan');
       return;
     }
 
-    const kelasRef = ref(db, 'kelas');
-    const newRef = push(kelasRef);
-    await set(newRef, { 
-      nama: newKelas.trim(),
-      status: 'Aktif' 
-    });
-    setNewKelas('');
+    try {
+      const kelasRef = ref(db, 'kelas');
+      const newRef = push(kelasRef);
+      await set(newRef, { 
+        nama: newKelas.trim(),
+        status: 'Aktif' 
+      });
+      setNewKelas('');
+      showAlert('Kelas baru berhasil ditambahkan!', 'Sukses');
+    } catch (err) {
+      showAlert('Gagal menambahkan kelas.', 'Kesalahan');
+    }
   };
 
   // Buka Modal Edit Kelas
@@ -95,19 +124,28 @@ export default function KelolaKelas() {
         nama: editNamaKelas.trim(),
         status: editStatus
       });
-      alert('Data kelas berhasil diperbarui!');
+      showAlert('Data kelas berhasil diperbarui!', 'Sukses');
       setModalEditOpen(false);
     } catch (err) {
-      alert('Gagal memperbarui kelas.');
+      showAlert('Gagal memperbarui kelas.', 'Kesalahan');
     }
   };
 
-  // Nonaktifkan / Aktifkan Kelas (Alih-alih Hard Delete)
-  const handleToggleStatusKelas = async (id, nama, currentStatus) => {
+  // Nonaktifkan / Aktifkan Kelas
+  const handleToggleStatusKelas = (id, nama, currentStatus) => {
     const nextStatus = currentStatus === 'Nonaktif' ? 'Aktif' : 'Nonaktif';
-    if (window.confirm(`Ubah status kelas ${nama} menjadi "${nextStatus}"?`)) {
-      await update(ref(db, `kelas/${id}`), { status: nextStatus });
-    }
+    showConfirm(
+      `Apakah Anda yakin ingin mengubah status kelas ${nama} menjadi "${nextStatus}"?`,
+      async () => {
+        try {
+          await update(ref(db, `kelas/${id}`), { status: nextStatus });
+          showAlert(`Status kelas ${nama} berhasil diubah menjadi ${nextStatus}.`, 'Sukses');
+        } catch (err) {
+          showAlert('Gagal mengubah status kelas.', 'Kesalahan');
+        }
+      },
+      'Ubah Status Kelas'
+    );
   };
 
   // Buka Lihat Anggota Kelas
@@ -119,13 +157,14 @@ export default function KelolaKelas() {
   // Buka Modal Tambah/Pindahkan Siswa ke Kelas Ini
   const handleOpenTambahSiswaKeKelas = () => {
     setSelectedSiswaIds([]);
+    setSearchSiswaQuery('');
     setModalTambahSiswaOpen(true);
   };
 
   // Eksekusi Pindahkan / Masukkan Siswa ke Kelas Terpilih
   const handleAssignSiswaToKelas = async () => {
     if (selectedSiswaIds.length === 0) {
-      alert('Pilih setidaknya satu siswa.');
+      showAlert('Pilih setidaknya satu siswa terlebih dahulu.', 'Peringatan');
       return;
     }
 
@@ -135,17 +174,23 @@ export default function KelolaKelas() {
           kelas: selectedKelasDetail.nama
         });
       }
-      alert(`Berhasil memindahkan/menambahkan ${selectedSiswaIds.length} siswa ke kelas ${selectedKelasDetail.nama}!`);
+      showAlert(`Berhasil memindahkan/menambahkan ${selectedSiswaIds.length} siswa ke kelas ${selectedKelasDetail.nama}!`, 'Sukses');
       setModalTambahSiswaOpen(false);
       setSelectedSiswaIds([]);
     } catch (err) {
-      alert('Gagal memindahkan siswa.');
+      showAlert('Gagal memindahkan siswa.', 'Kesalahan');
     }
   };
 
+  // Filter siswa untuk modal tambah siswa
+  const filteredSiswaForAssignment = siswaList.filter(s => 
+    (s.nama_lengkap?.toLowerCase() || '').includes(searchSiswaQuery.toLowerCase()) ||
+    (s.nis?.toLowerCase() || '').includes(searchSiswaQuery.toLowerCase())
+  );
+
   return (
     <div>
-      <h1 className="page-title mb-6">Master Data: Kelola Kelas</h1>
+      <h1 className="page-title mb-6">Kelola Kelas</h1>
       <p className="text-muted mb-8">Atur kelompok kelas, status keaktifan, dan lihat anggota siswa di setiap kelas.</p>
 
       <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
@@ -191,7 +236,6 @@ export default function KelolaKelas() {
                         <tr><td colSpan="5" className="text-center text-muted" style={{ padding: '2rem' }}>Belum ada data kelas.</td></tr>
                     ) : (
                         kelasList.map((k, index) => {
-                            // Hitung jumlah siswa di kelas ini secara dinamis
                             const jumlahSiswa = siswaList.filter(s => s.kelas === k.nama).length;
                             const statusKelas = k.status || 'Aktif';
 
@@ -210,7 +254,7 @@ export default function KelolaKelas() {
                                       </span>
                                   </td>
                                   <td style={{ textAlign: 'center' }}>
-                                      <div style={{ display: 'flex', gap: '0.4rum', justifyContent: 'center' }}>
+                                      <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
                                           {/* Lihat Anggota */}
                                           <button onClick={() => handleOpenAnggota(k)} className="btn btn-secondary" title="Lihat Anggota Kelas" style={{ padding: '0.3rem 0.5rem', background: '#e5e7eb', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
                                               <Users size={15} />
@@ -219,7 +263,7 @@ export default function KelolaKelas() {
                                           <button onClick={() => handleOpenEdit(k)} className="btn btn-primary" title="Edit Kelas" style={{ padding: '0.3rem 0.5rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
                                               <Edit3 size={15} />
                                           </button>
-                                          {/* Nonaktifkan Kelas (Soft Delete alternative) */}
+                                          {/* Nonaktifkan / Aktifkan Kelas */}
                                           <button onClick={() => handleToggleStatusKelas(k.id, k.nama, statusKelas)} className="btn btn-danger" title={statusKelas === 'Aktif' ? 'Nonaktifkan Kelas' : 'Aktifkan Kelas'} style={{ padding: '0.3rem 0.5rem', background: statusKelas === 'Aktif' ? '#dc2626' : '#10b981', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
                                               {statusKelas === 'Aktif' ? <UserX size={15} /> : <UserCheck size={15} />}
                                           </button>
@@ -314,15 +358,45 @@ export default function KelolaKelas() {
       {/* MODAL TAMBAH / PINDAHKAN SISWA KE KELAS INI */}
       {modalTambahSiswaOpen && selectedKelasDetail && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100, padding: '1rem' }}>
-          <div className="card" style={{ width: '100%', maxWidth: '500px', background: '#fff', maxHeight: '80vh', overflowY: 'auto' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '520px', background: '#fff', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
             <h3 className="mb-2">Masukkan Siswa ke {selectedKelasDetail.nama}</h3>
-            <p className="text-muted mb-4" style={{ fontSize: '0.85rem' }}>Pilih siswa dari daftar di bawah ini untuk dimasukkan atau dipindahkan ke kelas ini.</p>
+            <p className="text-muted mb-3" style={{ fontSize: '0.85rem' }}>Pilih siswa dari daftar di bawah ini untuk dimasukkan atau dipindahkan ke kelas ini.</p>
 
-            <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '0.5rem', marginBottom: '1rem' }}>
-              {siswaList.length === 0 ? (
-                <p className="text-center text-muted">Tidak ada data siswa.</p>
+            {/* Kotak Pencarian Siswa di dalam Modal */}
+            <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
+              <span style={{ position: 'absolute', top: '10px', left: '10px', color: '#9ca3af' }}><Search size={16} /></span>
+              <input 
+                type="text" 
+                className="form-control" 
+                placeholder="Cari berdasarkan nama atau NIS..." 
+                value={searchSiswaQuery}
+                onChange={(e) => setSearchSiswaQuery(e.target.value)}
+                style={{ paddingLeft: '2.25rem', fontSize: '0.9rem' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
+              <span className="text-muted">Dipilih: <b>{selectedSiswaIds.length}</b> siswa</span>
+              <button 
+                type="button" 
+                onClick={() => {
+                  if (selectedSiswaIds.length === filteredSiswaForAssignment.length) {
+                    setSelectedSiswaIds([]);
+                  } else {
+                    setSelectedSiswaIds(filteredSiswaForAssignment.map(s => s.id));
+                  }
+                }}
+                style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontWeight: 500 }}
+              >
+                {selectedSiswaIds.length === filteredSiswaForAssignment.length ? 'Batalkan Semua' : 'Pilih Semua yang Ditampilkan'}
+              </button>
+            </div>
+
+            <div style={{ flex: '1 1 auto', maxHeight: '250px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '0.5rem', marginBottom: '1rem' }}>
+              {filteredSiswaForAssignment.length === 0 ? (
+                <p className="text-center text-muted py-4">Tidak ada data siswa yang ditemukan.</p>
               ) : (
-                siswaList.map(s => (
+                filteredSiswaForAssignment.map(s => (
                   <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem', borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}>
                     <input 
                       type="checkbox" 
@@ -348,6 +422,31 @@ export default function KelolaKelas() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
               <button type="button" className="btn btn-secondary" onClick={() => setModalTambahSiswaOpen(false)} style={{ background: '#e5e7eb', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer' }}>Batal</button>
               <button type="button" className="btn btn-primary" onClick={handleAssignSiswaToKelas} style={{ padding: '0.5rem 1.25rem' }}>Pindahkan ke Kelas Ini</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ALERT CUSTOM */}
+      {modalAlertOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1200, padding: '1rem' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '380px', background: '#fff', textAlign: 'center', padding: '1.5rem' }}>
+            <h3 className="mb-2">{alertTitle}</h3>
+            <p className="text-muted mb-4" style={{ fontSize: '0.9rem' }}>{alertMessage}</p>
+            <button type="button" className="btn btn-primary" onClick={() => setModalAlertOpen(false)} style={{ width: '100%', padding: '0.5rem' }}>OK</button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRM CUSTOM */}
+      {modalConfirmOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1200, padding: '1rem' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '400px', background: '#fff', padding: '1.5rem' }}>
+            <h3 className="mb-2">{confirmTitle}</h3>
+            <p className="text-muted mb-4" style={{ fontSize: '0.9rem' }}>{confirmMessage}</p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setModalConfirmOpen(false)} style={{ background: '#e5e7eb', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer' }}>Batal</button>
+              <button type="button" className="btn btn-primary" onClick={() => { setModalConfirmOpen(false); if (onConfirmAction) onConfirmAction(); }} style={{ padding: '0.5rem 1.25rem' }}>Ya, Lanjutkan</button>
             </div>
           </div>
         </div>

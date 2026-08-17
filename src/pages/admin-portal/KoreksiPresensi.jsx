@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../services/firebase';
 import { ref, onValue, update } from 'firebase/database';
-import { Search, Edit3, Calendar, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { Search, Edit3, Clock } from 'lucide-react';
 
 export default function KoreksiPresensi() {
   const [presensiRaw, setPresensiRaw] = useState({});
@@ -22,6 +22,14 @@ export default function KoreksiPresensi() {
   const [formWaktu, setFormWaktu] = useState('07:00');
   const [formKeterangan, setFormKeterangan] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // State untuk Pop-up Alert Kustom
+  const [popupAlert, setPopupAlert] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'error' // 'error' atau 'success'
+  });
 
   useEffect(() => {
     // 1. Ambil data kelas untuk dropdown filter
@@ -100,7 +108,7 @@ export default function KoreksiPresensi() {
     setModalKoreksiOpen(true);
   };
 
-  // Handler Perubahan Status di Form untuk mengontrol Waktu Masuk
+  // Handler Perubahan Status di Form
   const handleStatusChange = (e) => {
     const newStatus = e.target.value;
     setFormStatus(newStatus);
@@ -111,10 +119,35 @@ export default function KoreksiPresensi() {
     }
   };
 
+  // --- VALIDASI REGEX & ATURAN WAKTU BERDASARKAN STATUS ---
+  const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  const isFormatValid = timeRegex.test(formWaktu); // True jika format HH:MM valid
+
+  // 1. Format salah (selain Tanpa Keterangan)
+  const isFormatError = formStatus !== 'Tanpa Keterangan' && !isFormatValid;
+
+  // 2. Aturan Hadir: harus <= 07:00
+  const isHadirInvalid = formStatus === 'Hadir' && isFormatValid && formWaktu > '07:00';
+
+  // 3. Aturan Terlambat: harus > 07:00
+  const isTerlambatInvalid = formStatus === 'Terlambat' && isFormatValid && formWaktu <= '07:00';
+
+  const hasError = isFormatError || isHadirInvalid || isTerlambatInvalid;
+
   // Simpan Perubahan Koreksi Presensi & Audit Trail
   const handleSaveKoreksi = async (e) => {
     e.preventDefault();
     if (!activeSiswa) return;
+
+    if (hasError) {
+      setPopupAlert({
+        isOpen: true,
+        title: 'Peringatan Validasi',
+        message: 'Gagal menyimpan: Periksa kembali format atau ketentuan waktu yang sesuai dengan status kehadiran.',
+        type: 'error'
+      });
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -137,12 +170,23 @@ export default function KoreksiPresensi() {
         auditTrail: auditString
       });
 
-      alert('Koreksi presensi berhasil disimpan!');
+      setPopupAlert({
+        isOpen: true,
+        title: 'Berhasil',
+        message: 'Koreksi presensi berhasil disimpan!',
+        type: 'success'
+      });
+
       setModalKoreksiOpen(false);
       setActiveSiswa(null);
     } catch (error) {
       console.error('Gagal menyimpan koreksi:', error);
-      alert('Terjadi kesalahan saat menyimpan koreksi.');
+      setPopupAlert({
+        isOpen: true,
+        title: 'Kesalahan',
+        message: 'Terjadi kesalahan saat menyimpan koreksi ke database.',
+        type: 'error'
+      });
     } finally {
       setSubmitting(false);
     }
@@ -151,8 +195,8 @@ export default function KoreksiPresensi() {
   const getBadgeStatus = (status) => {
     switch (status) {
       case 'Hadir': return <span className="badge badge-success" style={{ background: '#10b981', color: '#fff' }}>Hadir</span>;
-      case 'Terlambat': return <span className="badge badge-warning" style={{ background: '#f59e0b', color: '#fff' }}>Terlambat</span>;
-      case 'Tanpa Keterangan': return <span className="badge badge-danger" style={{ background: '#ef4444', color: '#fff' }}>Tanpa Keterangan</span>;
+      case 'Terlambat': return <span className="badge badge-warning" style={{ background: '#ef4444', color: '#fff' }}>Terlambat</span>;
+      case 'Tanpa Keterangan': return <span className="badge badge-danger" style={{ background: '#f59e0b', color: '#fff' }}>Tanpa Keterangan</span>;
       default: return <span className="badge badge-secondary" style={{ background: '#9ca3af', color: '#fff' }}>Tanpa Keterangan</span>;
     }
   };
@@ -306,7 +350,7 @@ export default function KoreksiPresensi() {
                   </select>
                 </div>
 
-                {/* Waktu Masuk (Disabled jika Tanpa Keterangan) */}
+                {/* Waktu Masuk */}
                 <div>
                   <label className="form-label">Waktu Masuk</label>
                   <input 
@@ -316,9 +360,36 @@ export default function KoreksiPresensi() {
                     value={formWaktu}
                     onChange={(e) => setFormWaktu(e.target.value)}
                     disabled={formStatus === 'Tanpa Keterangan'}
-                    style={{ backgroundColor: formStatus === 'Tanpa Keterangan' ? '#f3f4f6' : '#fff', cursor: formStatus === 'Tanpa Keterangan' ? 'not-allowed' : 'text' }}
+                    style={{ 
+                      backgroundColor: formStatus === 'Tanpa Keterangan' ? '#f3f4f6' : '#fff', 
+                      cursor: formStatus === 'Tanpa Keterangan' ? 'not-allowed' : 'text',
+                      borderColor: hasError ? '#ef4444' : undefined,
+                      color: hasError ? '#ef4444' : undefined
+                    }}
                     required={formStatus !== 'Tanpa Keterangan'}
                   />
+                  
+                  {/* Peringatan 1: Format Regex HH:MM Salah */}
+                  {isFormatError && (
+                    <small style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.3rem', display: 'block', fontWeight: 500 }}>
+                      Format waktu tidak valid. Gunakan format 24 jam <strong>HH:MM</strong> (Contoh: 07:00 atau 14:30).
+                    </small>
+                  )}
+
+                  {/* Peringatan 2: Status Hadir tapi Waktu > 07:00 */}
+                  {isHadirInvalid && (
+                    <small style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.3rem', display: 'block', fontWeight: 500 }}>
+                      Status "Hadir" hanya untuk waktu masuk $\le$ 07:00. Jika lebih dari itu, gunakan status "Terlambat".
+                    </small>
+                  )}
+
+                  {/* Peringatan 3: Status Terlambat tapi Waktu <= 07:00 */}
+                  {isTerlambatInvalid && (
+                    <small style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.3rem', display: 'block', fontWeight: 500 }}>
+                      Status "Terlambat" hanya untuk waktu masuk lebih dari 07:00. Jika kurang dari sama dengan 07:00, gunakan status "Hadir".
+                    </small>
+                  )}
+
                   {formStatus === 'Tanpa Keterangan' && (
                     <small className="text-muted" style={{ fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
                       Waktu masuk dikunci karena status "Tanpa Keterangan".
@@ -352,13 +423,54 @@ export default function KoreksiPresensi() {
                 <button 
                   type="submit" 
                   className="btn btn-primary"
-                  disabled={submitting}
-                  style={{ padding: '0.5rem 1.25rem' }}
+                  disabled={submitting || hasError}
+                  style={{ 
+                    padding: '0.5rem 1.25rem',
+                    opacity: hasError ? 0.6 : 1,
+                    cursor: hasError ? 'not-allowed' : 'pointer'
+                  }}
                 >
                   {submitting ? 'Menyimpan...' : 'Simpan Koreksi'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* POP-UP ALERT MODAL KUSTOM */}
+      {popupAlert.isOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center',
+          alignItems: 'center', zIndex: 1100, padding: '1rem'
+        }}>
+          <div className="card" style={{ width: '100%', maxWidth: '380px', background: '#fff', textAlign: 'center', padding: '1.5rem' }}>
+            
+            {/* Ikon Berdasarkan Tipe */}
+            <div style={{ 
+              width: '48px', height: '48px', borderRadius: '50%', 
+              backgroundColor: popupAlert.type === 'success' ? '#d1fae5' : '#fee2e2', 
+              color: popupAlert.type === 'success' ? '#10b981' : '#ef4444', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center', 
+              margin: '0 auto 1rem auto', fontSize: '1.5rem', fontWeight: 'bold' 
+            }}>
+              {popupAlert.type === 'success' ? '✓' : '!'}
+            </div>
+
+            <h4 style={{ marginBottom: '0.5rem', color: '#1f2937' }}>{popupAlert.title}</h4>
+            <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+              {popupAlert.message}
+            </p>
+
+            <button 
+              type="button" 
+              className="btn btn-primary"
+              onClick={() => setPopupAlert({ ...popupAlert, isOpen: false })}
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', cursor: 'pointer' }}
+            >
+              OK
+            </button>
           </div>
         </div>
       )}

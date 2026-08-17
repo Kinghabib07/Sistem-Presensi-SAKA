@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../services/firebase';
-import { ref, onValue } from 'firebase/database';
-import { Search, Eye, Calendar, Filter } from 'lucide-react';
+import { ref, onValue, remove } from 'firebase/database';
+import { Search, Eye, Trash2, AlertCircle } from 'lucide-react';
 
 export default function KelolaPresensi() {
   const [presensiList, setPresensiList] = useState([]);
@@ -15,8 +15,10 @@ export default function KelolaPresensi() {
   const [selectedStatus, setSelectedStatus] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Modal Detail State
+  // Modal States
   const [selectedDetail, setSelectedDetail] = useState(null);
+  const [selectedDelete, setSelectedDelete] = useState(null); // State untuk konfirmasi hapus
+  const [alertModal, setAlertModal] = useState({ show: false, title: '', message: '' }); // State untuk alert pop-up
 
   useEffect(() => {
     // 1. Ambil data kelas untuk dropdown filter
@@ -59,7 +61,8 @@ export default function KelolaPresensi() {
               status: statusFinal, 
               waktu: absensiSiswa ? absensiSiswa.waktu : '-',
               keterangan: absensiSiswa ? absensiSiswa.keterangan : '-',
-              foto: absensiSiswa ? absensiSiswa.foto : null
+              foto: absensiSiswa ? absensiSiswa.foto : null,
+              hasAbsen: !!absensiSiswa // Penanda apakah siswa sudah melakukan presensi
             };
           })
           .sort((a, b) => a.nama_lengkap.localeCompare(b.nama_lengkap));
@@ -74,6 +77,31 @@ export default function KelolaPresensi() {
       unsubData();
     };
   }, [selectedDate]);
+
+  // Fungsi Hapus Presensi Siswa
+  const handleConfirmDelete = async () => {
+    if (!selectedDelete) return;
+
+    try {
+      const presensiRef = ref(db, `presensi/${selectedDate}/${selectedDelete.uid}`);
+      await remove(presensiRef);
+      
+      setSelectedDelete(null);
+      setAlertModal({
+        show: true,
+        title: 'Berhasil',
+        message: `Data presensi ${selectedDelete.nama_lengkap} pada tanggal ${selectedDate} berhasil dihapus.`
+      });
+    } catch (error) {
+      console.error("Gagal menghapus presensi:", error);
+      setSelectedDelete(null);
+      setAlertModal({
+        show: true,
+        title: 'Gagal',
+        message: 'Terjadi kesalahan saat menghapus data presensi.'
+      });
+    }
+  };
 
   // Logika Filter & Pencarian
   const filteredPresensi = presensiList.filter(item => {
@@ -93,8 +121,8 @@ export default function KelolaPresensi() {
   const getBadgeStatus = (status) => {
     switch (status) {
       case 'Hadir': return <span className="badge badge-success" style={{ background: '#10b981', color: '#fff' }}>Hadir</span>;
-      case 'Terlambat': return <span className="badge badge-warning" style={{ background: '#f59e0b', color: '#fff' }}>Terlambat</span>;
-      case 'Tanpa Keterangan': return <span className="badge badge-danger" style={{ background: '#ef4444', color: '#fff' }}>Tanpa Keterangan</span>;
+      case 'Terlambat': return <span className="badge badge-warning" style={{ background: '#ef4444', color: '#fff' }}>Terlambat</span>;
+      case 'Tanpa Keterangan': return <span className="badge badge-danger" style={{ background: '#f59e0b', color: '#fff' }}>Tanpa Keterangan</span>;
       default: return <span className="badge badge-secondary" style={{ background: '#9ca3af', color: '#fff' }}>Tanpa Keterangan</span>;
     }
   };
@@ -104,7 +132,7 @@ export default function KelolaPresensi() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
         <div>
           <h1 className="page-title">Kelola Presensi Siswa</h1>
-          <p className="text-muted">Monitor kehadiran harian siswa secara real-time.</p>
+          <p className="text-muted">Monitor dan kelola kehadiran harian siswa secara real-time.</p>
         </div>
       </div>
 
@@ -120,11 +148,11 @@ export default function KelolaPresensi() {
         </div>
         <div className="card" style={{ padding: '1.25rem', textAlign: 'center' }}>
           <p className="text-muted" style={{ fontSize: '0.85rem' }}>Terlambat</p>
-          <h3 style={{ fontSize: '1.5rem', marginTop: '0.5rem', color: '#f59e0b' }}>{totalTerlambat}</h3>
+          <h3 style={{ fontSize: '1.5rem', marginTop: '0.5rem', color: '#ef4444' }}>{totalTerlambat}</h3>
         </div>
         <div className="card" style={{ padding: '1.25rem', textAlign: 'center' }}>
           <p className="text-muted" style={{ fontSize: '0.85rem' }}>Tanpa Keterangan</p>
-          <h3 style={{ fontSize: '1.5rem', marginTop: '0.5rem', color: '#ef4444' }}>{totalTanpaKeterangan}</h3>
+          <h3 style={{ fontSize: '1.5rem', marginTop: '0.5rem', color: '#f59e0b' }}>{totalTanpaKeterangan}</h3>
         </div>
       </div>
 
@@ -207,7 +235,7 @@ export default function KelolaPresensi() {
                 <th>Kelas</th>
                 <th>Status</th>
                 <th>Waktu Masuk</th>
-                <th width="100" style={{ textAlign: 'center' }}>Aksi</th>
+                <th width="120" style={{ textAlign: 'center' }}>Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -225,14 +253,26 @@ export default function KelolaPresensi() {
                     <td>{getBadgeStatus(item.status)}</td>
                     <td>{item.waktu}</td>
                     <td style={{ textAlign: 'center' }}>
-                      <button 
-                        onClick={() => setSelectedDetail(item)} 
-                        className="btn-icon" 
-                        title="Lihat Detail"
-                        style={{ color: 'var(--primary)', margin: '0 auto', background: 'none', border: 'none', cursor: 'pointer' }}
-                      >
-                        <Eye size={18} />
-                      </button>
+                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                        <button 
+                          onClick={() => setSelectedDetail(item)} 
+                          className="btn-icon" 
+                          title="Lihat Detail"
+                          style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer' }}
+                        >
+                          <Eye size={18} />
+                        </button>
+                        {item.hasAbsen && (
+                          <button 
+                            onClick={() => setSelectedDelete(item)} 
+                            className="btn-icon" 
+                            title="Hapus Presensi"
+                            style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -278,6 +318,60 @@ export default function KelolaPresensi() {
                 Tutup
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL KONFIRMASI HAPUS */}
+      {selectedDelete && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center',
+          alignItems: 'center', zIndex: 1000, padding: '1rem'
+        }}>
+          <div className="card" style={{ width: '100%', maxWidth: '400px', background: '#fff', textAlign: 'center', padding: '2rem' }}>
+            <AlertCircle size={48} style={{ color: '#ef4444', margin: '0 auto 1rem auto' }} />
+            <h3 className="mb-2">Hapus Data Presensi?</h3>
+            <p className="text-muted mb-4" style={{ fontSize: '0.9rem' }}>
+              Apakah Anda yakin ingin menghapus catatan presensi <strong>{selectedDelete.nama_lengkap}</strong> pada tanggal <strong>{selectedDate}</strong>?
+            </p>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <button 
+                onClick={() => setSelectedDelete(null)} 
+                className="btn btn-secondary"
+                style={{ padding: '0.5rem 1.25rem' }}
+              >
+                Batal
+              </button>
+              <button 
+                onClick={handleConfirmDelete} 
+                className="btn btn-danger"
+                style={{ padding: '0.5rem 1.25rem', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ALERT POP-UP UMUM */}
+      {alertModal.show && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center',
+          alignItems: 'center', zIndex: 1000, padding: '1rem'
+        }}>
+          <div className="card" style={{ width: '100%', maxWidth: '380px', background: '#fff', textAlign: 'center', padding: '1.75rem' }}>
+            <h3 className="mb-2">{alertModal.title}</h3>
+            <p className="text-muted mb-4" style={{ fontSize: '0.9rem' }}>{alertModal.message}</p>
+            <button 
+              onClick={() => setAlertModal({ show: false, title: '', message: '' })} 
+              className="btn btn-primary"
+              style={{ padding: '0.5rem 1.5rem', width: '100%' }}
+            >
+              OK
+            </button>
           </div>
         </div>
       )}

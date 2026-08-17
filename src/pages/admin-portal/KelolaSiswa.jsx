@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { db, secondaryAuth } from '../../services/firebase';
-import { ref, onValue, set, update, remove } from 'firebase/database';
+import { ref, onValue, set, update } from 'firebase/database';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { Trash2, UploadCloud, Plus, Search, Edit3, KeyRound, UserCheck, UserX } from 'lucide-react';
+import { UploadCloud, Plus, Search, Edit3, KeyRound, UserCheck, UserX } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 export default function KelolaSiswa() {
@@ -16,16 +16,39 @@ export default function KelolaSiswa() {
   const [filterKelas, setFilterKelas] = useState('Semua');
   const [filterStatus, setFilterStatus] = useState('Semua');
 
-  // Modal States
+  // Modal Form States (Tambah / Edit)
   const [modalOpen, setModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [activeId, setActiveId] = useState(null);
 
-  // Form states (Tambah / Edit)
+  // Form states
   const [newNis, setNewNis] = useState('');
   const [newNama, setNewNama] = useState('');
   const [newKelas, setNewKelas] = useState('');
   const [newStatus, setNewStatus] = useState('Aktif');
+
+  // Modal Alert / Confirm State (Pengganti alert & window.confirm bawaan browser)
+  const [modalAlertOpen, setModalAlertOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertTitle, setAlertTitle] = useState('Informasi');
+
+  const [modalConfirmOpen, setModalConfirmOpen] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState('Konfirmasi');
+  const [confirmMessage, setConfirmMessage] = useState('');
+  const [onConfirmAction, setOnConfirmAction] = useState(null);
+
+  const showAlert = (message, title = 'Informasi') => {
+    setAlertMessage(message);
+    setAlertTitle(title);
+    setModalAlertOpen(true);
+  };
+
+  const showConfirm = (message, action, title = 'Konfirmasi') => {
+    setConfirmMessage(message);
+    setConfirmTitle(title);
+    setOnConfirmAction(() => action);
+    setModalConfirmOpen(true);
+  };
 
   useEffect(() => {
     // Ambil data siswa
@@ -105,39 +128,53 @@ export default function KelolaSiswa() {
           status: 'Aktif'
         });
 
-        alert(`Berhasil menambahkan siswa ${newNama}!\nUsername/NIS: ${newNis}\nPassword default: siswa123`);
+        showAlert(`Berhasil menambahkan siswa ${newNama}!\nUsername/NIS: ${newNis}\nPassword default: siswa123`, 'Sukses');
       } else {
-        // Mode Edit Data (Tanpa mengubah riwayat presensi lama)
+        // Mode Edit Data
         await update(ref(db, `users/${activeId}`), {
           nama_lengkap: newNama.trim(),
           kelas: newKelas,
           status: newStatus,
           nis: newNis.trim()
         });
-        alert(`Data siswa ${newNama} berhasil diperbarui!`);
+        showAlert(`Data siswa ${newNama} berhasil diperbarui!`, 'Sukses');
       }
 
       setModalOpen(false);
-      setNewNis(''); setNewNama('');
+      setNewNis(''); 
+      setNewNama('');
     } catch (err) {
-      alert('Gagal menyimpan data! Pastikan NIS unik atau format benar.');
+      showAlert('Gagal menyimpan data! Pastikan NIS unik atau format benar.', 'Kesalahan');
     }
     setLoading(false);
   };
 
-  // Soft Delete / Toggle Status Aktif & Nonaktif (Agar riwayat presensi aman)
-  const handleToggleStatus = async (id, nama, currentStatus) => {
+  // Soft Delete / Toggle Status Aktif & Nonaktif
+  const handleToggleStatus = (id, nama, currentStatus) => {
     const nextStatus = currentStatus === 'Nonaktif' ? 'Aktif' : 'Nonaktif';
-    if (window.confirm(`Ubah status ${nama} menjadi "${nextStatus}"? Siswa dengan status Nonaktif tidak dapat melakukan presensi.`)) {
-      await update(ref(db, `users/${id}`), { status: nextStatus });
-    }
+    showConfirm(
+      `Ubah status ${nama} menjadi "${nextStatus}"? Siswa dengan status Nonaktif tidak dapat melakukan presensi.`,
+      async () => {
+        try {
+          await update(ref(db, `users/${id}`), { status: nextStatus });
+          showAlert(`Status ${nama} berhasil diubah menjadi ${nextStatus}.`, 'Sukses');
+        } catch (err) {
+          showAlert('Gagal mengubah status siswa.', 'Kesalahan');
+        }
+      },
+      'Ubah Status Siswa'
+    );
   };
 
   // Reset Password Siswa
-  const handleResetPassword = async (nama, nis) => {
-    if (window.confirm(`Reset password untuk siswa ${nama} (NIS: ${nis}) menjadi "siswa123"?`)) {
-      alert(`Password untuk ${nama} berhasil direset ke default: siswa123\n(Catatan: Pastikan siswa login menggunakan password baru tersebut).`);
-    }
+  const handleResetPassword = (nama, nis) => {
+    showConfirm(
+      `Reset password untuk siswa ${nama} (NIS: ${nis}) menjadi "siswa123"?`,
+      () => {
+        showAlert(`Password untuk ${nama} berhasil direset ke default: siswa123\n(Catatan: Pastikan siswa login menggunakan password baru tersebut).`, 'Reset Berhasil');
+      },
+      'Konfirmasi Reset Password'
+    );
   };
 
   const handleImportExcel = async (e) => {
@@ -181,9 +218,9 @@ export default function KelolaSiswa() {
             }
           }
         }
-        alert(`IMPORT EXCEL SELESAI!\n\n✅ Berhasil ditambahkan: ${sukses} siswa\n❌ Gagal/Duplikat NIS: ${gagal} siswa\n\nPassword default untuk semua siswa baru adalah: siswa123`);
+        showAlert(`IMPORT EXCEL SELESAI!\n\n✅ Berhasil ditambahkan: ${sukses} siswa\n❌ Gagal/Duplikat NIS: ${gagal} siswa\n\nPassword default untuk semua siswa baru adalah: siswa123`, 'Hasil Import');
       } catch (err) {
-        alert('Format Excel tidak dikenali! Pastikan memiliki header kolom: NIS, Nama, Kelas.');
+        showAlert('Format Excel tidak dikenali! Pastikan memiliki header kolom: NIS, Nama, Kelas.', 'Kesalahan Format');
       }
       setLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -338,7 +375,7 @@ export default function KelolaSiswa() {
                                 <KeyRound size={15} />
                               </button>
 
-                              {/* Nonaktifkan / Aktifkan Siswa (Soft Delete alternative) */}
+                              {/* Nonaktifkan / Aktifkan Siswa */}
                               <button 
                                 onClick={() => handleToggleStatus(s.id, s.nama_lengkap, statusSiswa)} 
                                 className="btn btn-danger" 
@@ -449,6 +486,31 @@ export default function KelolaSiswa() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ALERT CUSTOM */}
+      {modalAlertOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1200, padding: '1rem' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '380px', background: '#fff', textAlign: 'center', padding: '1.5rem' }}>
+            <h3 className="mb-2">{alertTitle}</h3>
+            <p className="text-muted mb-4" style={{ fontSize: '0.9rem', whiteSpace: 'pre-line' }}>{alertMessage}</p>
+            <button type="button" className="btn btn-primary" onClick={() => setModalAlertOpen(false)} style={{ width: '100%', padding: '0.5rem' }}>OK</button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRM CUSTOM */}
+      {modalConfirmOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1200, padding: '1rem' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '400px', background: '#fff', padding: '1.5rem' }}>
+            <h3 className="mb-2">{confirmTitle}</h3>
+            <p className="text-muted mb-4" style={{ fontSize: '0.9rem' }}>{confirmMessage}</p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setModalConfirmOpen(false)} style={{ background: '#e5e7eb', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer' }}>Batal</button>
+              <button type="button" className="btn btn-primary" onClick={() => { setModalConfirmOpen(false); if (onConfirmAction) onConfirmAction(); }} style={{ padding: '0.5rem 1.25rem' }}>Ya, Lanjutkan</button>
+            </div>
           </div>
         </div>
       )}
