@@ -135,13 +135,20 @@ export default function KelolaKelas() {
   const handleToggleStatusKelas = (id, nama, currentStatus) => {
     const nextStatus = currentStatus === 'Nonaktif' ? 'Aktif' : 'Nonaktif';
     showConfirm(
-      `Apakah Anda yakin ingin mengubah status kelas ${nama} menjadi "${nextStatus}"?`,
+      `Apakah Anda yakin ingin mengubah status kelas ${nama} menjadi "${nextStatus}"? Perhatian: Seluruh siswa di kelas ini juga akan ikut menjadi ${nextStatus}.`,
       async () => {
         try {
+          // Update status kelas
           await update(ref(db, `kelas/${id}`), { status: nextStatus });
-          showAlert(`Status kelas ${nama} berhasil diubah menjadi ${nextStatus}.`, 'Sukses');
+          
+          // Update status semua siswa yang berada di kelas ini
+          const siswaDiKelas = siswaList.filter(s => s.kelas === nama);
+          const updatePromises = siswaDiKelas.map(s => update(ref(db, `users/${s.id}`), { status: nextStatus }));
+          await Promise.all(updatePromises);
+
+          showAlert(`Status kelas ${nama} dan ${siswaDiKelas.length} siswanya berhasil diubah menjadi ${nextStatus}.`, 'Sukses');
         } catch (err) {
-          showAlert('Gagal mengubah status kelas.', 'Kesalahan');
+          showAlert('Gagal mengubah status kelas dan siswa.', 'Kesalahan');
         }
       },
       'Ubah Status Kelas'

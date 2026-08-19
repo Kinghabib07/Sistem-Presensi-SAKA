@@ -10,8 +10,8 @@ export default function ScannerAdmin() {
 
   useEffect(() => {
     let scanner = new Html5QrcodeScanner("qr-reader", {
-      qrbox: { width: 300, height: 300 },
-      fps: 5,
+      qrbox: { width: 250, height: 250 },
+      fps: 10,
     });
 
     scanner.render(async (decodedText) => {
@@ -57,7 +57,6 @@ export default function ScannerAdmin() {
              if (jam > 7 || (jam === 7 && menit > 15)) {
                kehadiranStatus = 'Terlambat';
              }
-
              // Simpan ke DB
              const newRecordRef = push(ref(db, `presensi/${decoded.uid}`));
              await set(newRecordRef, {
@@ -92,20 +91,45 @@ export default function ScannerAdmin() {
     });
 
     return () => {
-      if (scanner) scanner.clear();
+      try {
+        if (scanner) {
+          scanner.clear().catch(e => console.log("Abaikan error clear scanner", e));
+        }
+      } catch (err) {
+        console.log("Abaikan error unmount:", err);
+      }
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div>
+      <style>{`
+        #qr-reader {
+          border: none !important;
+        }
+        #qr-reader video {
+          object-fit: cover !important;
+          max-height: 350px !important;
+          width: 100% !important;
+          border-radius: 8px;
+        }
+        #qr-reader__scan_region {
+          background-color: #000 !important;
+          border-radius: 8px;
+          overflow: hidden;
+        }
+        #qr-reader__dashboard_section_csr span {
+          color: #fff !important;
+        }
+      `}</style>
       <h1 className="page-title mb-6">Pemindai Presensi (Scanner)</h1>
       <p className="text-muted mb-8">Arahkan kamera ke QR Code di HP Siswa. Sistem otomatis menolak QR berupa *screenshot*.</p>
 
       <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
         {/* Kolom Kamera */}
-        <div style={{ flex: '1 1 400px', maxWidth: '600px' }}>
-          <div className="card" style={{ padding: '1rem', background: '#000', overflow: 'hidden' }}>
-            <div id="qr-reader" style={{ width: '100%', border: 'none' }}></div>
+        <div style={{ flex: '1 1 400px', maxWidth: '600px', margin: '0 auto' }}>
+          <div className="card" style={{ padding: '0.5rem', background: '#000', overflow: 'hidden', borderRadius: '12px', display: 'flex', justifyContent: 'center' }}>
+            <div id="qr-reader" style={{ width: '100%', maxWidth: '500px', border: 'none' }}></div>
           </div>
         </div>
 

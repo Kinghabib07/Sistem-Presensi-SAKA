@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { db, secondaryAuth } from '../../services/firebase';
-import { ref, onValue, set, update } from 'firebase/database';
+import { ref, onValue, set, update, push } from 'firebase/database';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { UploadCloud, Plus, Search, Edit3, KeyRound, UserCheck, UserX } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -15,6 +15,10 @@ export default function KelolaSiswa() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterKelas, setFilterKelas] = useState('Semua');
   const [filterStatus, setFilterStatus] = useState('Semua');
+
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 25;
 
   // Modal Form States (Tambah / Edit)
   const [modalOpen, setModalOpen] = useState(false);
@@ -191,6 +195,16 @@ export default function KelolaSiswa() {
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws);
 
+        // --- 1. Tambah Kelas Baru Secara Otomatis ---
+        const kelasUnikExcel = [...new Set(data.map(row => String(row['Kelas'] || row['kelas']).trim()).filter(k => k && k !== 'undefined'))];
+        const kelasBaru = kelasUnikExcel.filter(k => !kelasList.includes(k));
+        
+        for (let namaKelasBaru of kelasBaru) {
+            const newKelasRef = push(ref(db, 'kelas'));
+            await set(newKelasRef, { nama: namaKelasBaru, status: 'Aktif' });
+        }
+        // ---------------------------------------------
+
         let sukses = 0;
         let gagal = 0;
 
@@ -236,6 +250,18 @@ export default function KelolaSiswa() {
     const matchStatus = filterStatus === 'Semua' || (s.status || 'Aktif') === filterStatus;
     return matchSearch && matchKelas && matchStatus;
   });
+
+  // Reset ke halaman 1 jika filter berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterKelas, filterStatus]);
+
+  // Pagination Logic
+  const totalPages = Math.ceil(filteredSiswaList.length / itemsPerPage);
+  const currentSiswaData = filteredSiswaList.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div>
@@ -338,10 +364,10 @@ export default function KelolaSiswa() {
               </tr>
               </thead>
               <tbody>
-              {filteredSiswaList.length === 0 ? (
+              {currentSiswaData.length === 0 ? (
                   <tr><td colSpan="5" className="text-center text-muted" style={{ padding: '2rem' }}>Tidak ada data siswa yang ditemukan.</td></tr>
               ) : (
-                  filteredSiswaList.map((s) => {
+                  currentSiswaData.map((s) => {
                     const statusSiswa = s.status || 'Aktif';
                     return (
                       <tr key={s.id}>
@@ -393,6 +419,31 @@ export default function KelolaSiswa() {
               </tbody>
           </table>
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div style={{ padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', borderTop: '1px solid #f3f4f6' }}>
+              <button 
+                className="btn btn-secondary" 
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => prev - 1)}
+                style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+              >
+                Sebelumnya
+              </button>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#4b5563' }}>
+                Halaman {currentPage} dari {totalPages}
+              </span>
+              <button 
+                className="btn btn-secondary" 
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                style={{ padding: '0.4rem 1rem', fontSize: '0.85rem', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
+              >
+                Selanjutnya
+              </button>
+            </div>
+          )}
       </div>
 
       {/* MODAL FORM TAMBAH / EDIT SISWA */}
