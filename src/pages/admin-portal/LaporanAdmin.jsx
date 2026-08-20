@@ -160,6 +160,20 @@ export default function LaporanPresensi() {
     return matchKelas && matchStatus && matchSearch;
   });
 
+  // Pagination Logic
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 25;
+  
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedDate, selectedMonth, selectedKelas, selectedStatus, searchQuery, modeRekap]);
+
+  const totalPages = Math.ceil(filteredReportList.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredReportList.slice(indexOfFirstItem, indexOfLastItem);
+
   // Handler Export Excel (CSV format yang kompatibel dengan Excel)
   const handleExportExcel = () => {
     if (filteredReportList.length === 0) {
@@ -363,12 +377,12 @@ export default function LaporanPresensi() {
             <tbody>
               {loading ? (
                 <tr><td colSpan="7" className="text-center text-muted" style={{ padding: '2rem' }}>Memuat data laporan...</td></tr>
-              ) : filteredReportList.length === 0 ? (
+              ) : currentItems.length === 0 ? (
                 <tr><td colSpan="7" className="text-center text-muted" style={{ padding: '2rem' }}>Tidak ada data laporan yang sesuai.</td></tr>
               ) : (
-                filteredReportList.map((item, index) => (
+                currentItems.map((item, index) => (
                   <tr key={item.uid}>
-                    <td>{index + 1}</td>
+                    <td>{indexOfFirstItem + index + 1}</td>
                     <td style={{ fontWeight: 600 }}>{item.nis}</td>
                     <td>{item.nama_lengkap}</td>
                     <td><span className="badge badge-info">{item.kelas}</span></td>
@@ -392,6 +406,29 @@ export default function LaporanPresensi() {
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="no-print" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1.5rem' }}>
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="btn btn-secondary"
+              style={{ padding: '0.5rem 1rem', borderRadius: '20px', border: 'none', background: currentPage === 1 ? '#f3f4f6' : '#e5e7eb', color: currentPage === 1 ? '#9ca3af' : '#374151', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+            >
+              Sebelumnya
+            </button>
+            <span style={{ fontSize: '0.9rem', color: '#4b5563', fontWeight: 500 }}>Halaman {currentPage} dari {totalPages}</span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="btn btn-secondary"
+              style={{ padding: '0.5rem 1rem', borderRadius: '20px', border: 'none', background: currentPage === totalPages ? '#f3f4f6' : '#e5e7eb', color: currentPage === totalPages ? '#9ca3af' : '#374151', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
+            >
+              Selanjutnya
+            </button>
+          </div>
+        )}
       </div>
 
       {/* CSS Khusus Cetak/PDF agar bersih dari elemen navigasi/filter */}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { ref, push, set, get, child } from 'firebase/database';
 import { db } from '../../services/firebase';
@@ -9,6 +9,9 @@ export default function ScannerAdmin() {
   const [isScanning, setIsScanning] = useState(true);
 
   useEffect(() => {
+    const qrRegion = document.getElementById("qr-reader");
+    if (qrRegion) qrRegion.innerHTML = "";
+
     let scanner = new Html5QrcodeScanner("qr-reader", {
       qrbox: { width: 250, height: 250 },
       fps: 10,
@@ -17,7 +20,6 @@ export default function ScannerAdmin() {
     scanner.render(async (decodedText) => {
       if (!isScanning) return;
       
-      // Jeda scanning agar tidak dobel scan berulang-ulang dengan cepat
       setIsScanning(false);
       scanner.pause(true);
 
@@ -26,18 +28,10 @@ export default function ScannerAdmin() {
         const now = Date.now();
         const diff = now - decoded.time;
 
-        // Cek kedaluwarsa (Toleransi 30 detik untuk menghindari jeda jaringan)
         if (diff > 30000 || diff < -5000) {
-          setStatus({ 
-            type: 'danger', 
-            msg: 'QR CODE KEDALUWARSA / TIDAK VALID!', 
-            detail: 'Diduga menggunakan foto/screenshot (Indikasi Titip Absen).' 
-          });
+          setStatus({ type: 'danger', msg: 'QR CODE KEDALUWARSA / TIDAK VALID!', detail: 'Diduga menggunakan foto/screenshot (Indikasi Titip Absen).' });
         } else {
-          // Validasi berhasil, proses presensi
           const today = new Date().toISOString().split('T')[0];
-          
-          // Cek apakah siswa ini sudah absen hari ini (mencegah duplikat absen di hari yg sama)
           const presensiRef = ref(db, `presensi/${decoded.uid}`);
           const snapshot = await get(presensiRef);
           
@@ -50,54 +44,37 @@ export default function ScannerAdmin() {
           if (sudahAbsen) {
              setStatus({ type: 'warning', msg: 'SUDAH PRESENSI', detail: `${decoded.nama} sudah melakukan presensi hari ini.` });
           } else {
-             // Tentukan status Terlambat atau Hadir berdasarkan Jam (Misal batas jam 07:15)
              const jam = new Date().getHours();
              const menit = new Date().getMinutes();
              let kehadiranStatus = 'Hadir';
              if (jam > 7 || (jam === 7 && menit > 15)) {
                kehadiranStatus = 'Terlambat';
              }
-             // Simpan ke DB
              const newRecordRef = push(ref(db, `presensi/${decoded.uid}`));
              await set(newRecordRef, {
-               tanggal: today,
-               waktu: new Date().toISOString(),
-               status: kehadiranStatus,
-               nama: decoded.nama,
-               kelas: decoded.kelas,
-               uid: decoded.uid
+               tanggal: today, waktu: new Date().toISOString(), status: kehadiranStatus, nama: decoded.nama, kelas: decoded.kelas, uid: decoded.uid
              });
-
-             setStatus({ 
-               type: 'success', 
-               msg: kehadiranStatus.toUpperCase(), 
-               detail: `Berhasil mencatat presensi untuk ${decoded.nama} (${decoded.kelas})` 
-             });
+             setStatus({ type: 'success', msg: kehadiranStatus.toUpperCase(), detail: `Berhasil mencatat presensi untuk ${decoded.nama} (${decoded.kelas})` });
           }
         }
       } catch (err) {
         setStatus({ type: 'danger', msg: 'FORMAT QR SALAH', detail: 'QR Code ini tidak berasal dari sistem Portal Siswa.' });
       }
 
-      // Resume scanner setelah 3 detik
       setTimeout(() => {
         setStatus({ type: '', msg: '', detail: null });
         setIsScanning(true);
         if(scanner) scanner.resume();
       }, 3000);
 
-    }, (error) => {
-      // Abaikan error saat tidak ada QR yang terdeteksi
-    });
+    }, (error) => { /* ignore */ });
 
     return () => {
       try {
         if (scanner) {
-          scanner.clear().catch(e => console.log("Abaikan error clear scanner", e));
+          scanner.clear().catch(e => {});
         }
-      } catch (err) {
-        console.log("Abaikan error unmount:", err);
-      }
+      } catch (err) {}
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -106,20 +83,32 @@ export default function ScannerAdmin() {
       <style>{`
         #qr-reader {
           border: none !important;
+          width: 100% !important;
         }
         #qr-reader video {
           object-fit: cover !important;
-          max-height: 350px !important;
           width: 100% !important;
-          border-radius: 8px;
+          aspect-ratio: 1 / 1 !important; /* Memaksa video selalu KOTAK Sempurna! */
+          border-radius: 12px !important;
         }
         #qr-reader__scan_region {
-          background-color: #000 !important;
-          border-radius: 8px;
+          border-radius: 12px;
           overflow: hidden;
+          background-color: transparent !important;
         }
-        #qr-reader__dashboard_section_csr span {
-          color: #fff !important;
+        /* Percantik tombol bawaan kamera */
+        #qr-reader__dashboard_section_csr button {
+          background: #4f46e5 !important;
+          color: white !important;
+          border: none !important;
+          padding: 8px 16px !important;
+          border-radius: 6px !important;
+          margin: 4px !important;
+          cursor: pointer !important;
+          font-weight: 600 !important;
+        }
+        #qr-reader__dashboard_section_csr button:hover {
+          background: #4338ca !important;
         }
       `}</style>
       <h1 className="page-title mb-6">Pemindai Presensi (Scanner)</h1>
@@ -128,8 +117,8 @@ export default function ScannerAdmin() {
       <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
         {/* Kolom Kamera */}
         <div style={{ flex: '1 1 400px', maxWidth: '600px', margin: '0 auto' }}>
-          <div className="card" style={{ padding: '0.5rem', background: '#000', overflow: 'hidden', borderRadius: '12px', display: 'flex', justifyContent: 'center' }}>
-            <div id="qr-reader" style={{ width: '100%', maxWidth: '500px', border: 'none' }}></div>
+          <div className="card" style={{ height: '100%', padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div id="qr-reader" style={{ width: '100%', border: 'none' }}></div>
           </div>
         </div>
 

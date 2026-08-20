@@ -99,6 +99,20 @@ export default function KoreksiPresensi() {
     return matchKelas && matchSearch;
   });
 
+  // Pagination Logic
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 25;
+  
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedDate, selectedKelas, searchQuery]);
+
+  const totalPages = Math.ceil(filteredList.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredList.slice(indexOfFirstItem, indexOfLastItem);
+
   // Buka Modal Koreksi
   const handleOpenKoreksi = (siswa) => {
     setActiveSiswa(siswa);
@@ -276,12 +290,12 @@ export default function KoreksiPresensi() {
             <tbody>
               {loading ? (
                 <tr><td colSpan="8" className="text-center text-muted" style={{ padding: '2rem' }}>Memuat data...</td></tr>
-              ) : filteredList.length === 0 ? (
+              ) : currentItems.length === 0 ? (
                 <tr><td colSpan="8" className="text-center text-muted" style={{ padding: '2rem' }}>Tidak ada data siswa yang ditemukan.</td></tr>
               ) : (
-                filteredList.map((item, index) => (
+                currentItems.map((item, index) => (
                   <tr key={item.uid}>
-                    <td>{index + 1}</td>
+                    <td>{indexOfFirstItem + index + 1}</td>
                     <td style={{ fontWeight: 600 }}>{item.nis}</td>
                     <td>{item.nama_lengkap}</td>
                     <td><span className="badge badge-info">{item.kelas}</span></td>
@@ -317,6 +331,29 @@ export default function KoreksiPresensi() {
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1.5rem' }}>
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="btn btn-secondary"
+              style={{ padding: '0.5rem 1rem', borderRadius: '20px', border: 'none', background: currentPage === 1 ? '#f3f4f6' : '#e5e7eb', color: currentPage === 1 ? '#9ca3af' : '#374151', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+            >
+              Sebelumnya
+            </button>
+            <span style={{ fontSize: '0.9rem', color: '#4b5563', fontWeight: 500 }}>Halaman {currentPage} dari {totalPages}</span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="btn btn-secondary"
+              style={{ padding: '0.5rem 1rem', borderRadius: '20px', border: 'none', background: currentPage === totalPages ? '#f3f4f6' : '#e5e7eb', color: currentPage === totalPages ? '#9ca3af' : '#374151', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
+            >
+              Selanjutnya
+            </button>
+          </div>
+        )}
       </div>
 
       {/* MODAL FORM KOREKSI */}
