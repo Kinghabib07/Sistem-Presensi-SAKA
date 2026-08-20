@@ -1,82 +1,110 @@
 import { useEffect, useState, useRef } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
-import { ref, push, set, get, child } from 'firebase/database';
+import { Html5Qrcode } from 'html5-qrcode';
+import { ref, push, set, get } from 'firebase/database';
 import { db } from '../../services/firebase';
-import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Camera, StopCircle } from 'lucide-react';
 
 export default function ScannerAdmin() {
   const [status, setStatus] = useState({ type: '', msg: '', detail: null });
-  const [isScanning, setIsScanning] = useState(true);
+  const [isScanning, setIsScanning] = useState(false);
+  const scannerRef = useRef(null);
+
+  // Fungsi untuk memulai pemindaian
+  const startScanning = async () => {
+    setStatus({ type: '', msg: '', detail: null });
+    
+    if (!scannerRef.current) {
+      scannerRef.current = new Html5Qrcode("qr-reader");
+    }
+
+    try {
+      await scannerRef.current.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+        },
+        async (decodedText) => {
+          // Hentikan sementara pemindaian saat QR terbaca
+          await scannerRef.current.pause(true);
+          setIsScanning(false);
+
+          try {
+            const decoded = JSON.parse(atob(decodedText));
+            const now = Date.now();
+            const diff = now - decoded.time;
+
+            if (diff > 30000 || diff < -5000) {
+              setStatus({ type: 'danger', msg: 'QR CODE KEDALUWARSA / TIDAK VALID!', detail: 'Diduga menggunakan foto/screenshot (Indikasi Titip Absen).' });
+            } else {
+              const today = new Date().toISOString().split('T')[0];
+              const presensiRef = ref(db, `presensi/${decoded.uid}`);
+              const snapshot = await get(presensiRef);
+              
+              let sudahAbsen = false;
+              if (snapshot.exists()) {
+                 const records = snapshot.val();
+                 sudahAbsen = Object.values(records).some(r => r.tanggal === today);
+              }
+
+              if (sudahAbsen) {
+                 setStatus({ type: 'warning', msg: 'SUDAH PRESENSI', detail: `${decoded.nama} sudah melakukan presensi hari ini.` });
+              } else {
+                 const jam = new Date().getHours();
+                 const menit = new Date().getMinutes();
+                 let kehadiranStatus = 'Hadir';
+                 if (jam > 7 || (jam === 7 && menit > 15)) {
+                   kehadiranStatus = 'Terlambat';
+                 }
+                 const newRecordRef = push(ref(db, `presensi/${decoded.uid}`));
+                 await set(newRecordRef, {
+                   tanggal: today, waktu: new Date().toISOString(), status: kehadiranStatus, nama: decoded.nama, kelas: decoded.kelas, uid: decoded.uid
+                 });
+                 setStatus({ type: 'success', msg: kehadiranStatus.toUpperCase(), detail: `Berhasil mencatat presensi untuk ${decoded.nama} (${decoded.kelas})` });
+              }
+            }
+          } catch (err) {
+            setStatus({ type: 'danger', msg: 'FORMAT QR SALAH', detail: 'QR Code ini tidak berasal dari sistem Portal Siswa.' });
+          }
+
+          // Jeda beberapa detik sebelum lanjut scan berikutnya
+          setTimeout(async () => {
+            setStatus({ type: '', msg: '', detail: null });
+            if (scannerRef.current && scannerRef.current.isScanning) {
+              await scannerRef.current.resume();
+              setIsScanning(true);
+            }
+          }, 3000);
+        },
+        (error) => {
+          // Ignore error scanning frame harian
+        }
+      );
+      setIsScanning(true);
+    } catch (err) {
+      console.error("Gagal memulai kamera:", err);
+    }
+  };
+
+  // Fungsi untuk menghentikan pemindaian secara manual
+  const stopScanning = async () => {
+    if (scannerRef.current && scannerRef.current.isScanning) {
+      try {
+        await scannerRef.current.stop();
+        setIsScanning(false);
+      } catch (err) {
+        console.error("Gagal menghentikan scanner:", err);
+      }
+    }
+  };
 
   useEffect(() => {
-    const qrRegion = document.getElementById("qr-reader");
-    if (qrRegion) qrRegion.innerHTML = "";
-
-    let scanner = new Html5QrcodeScanner("qr-reader", {
-      qrbox: { width: 250, height: 250 },
-      fps: 10,
-    });
-
-    scanner.render(async (decodedText) => {
-      if (!isScanning) return;
-      
-      setIsScanning(false);
-      scanner.pause(true);
-
-      try {
-        const decoded = JSON.parse(atob(decodedText));
-        const now = Date.now();
-        const diff = now - decoded.time;
-
-        if (diff > 30000 || diff < -5000) {
-          setStatus({ type: 'danger', msg: 'QR CODE KEDALUWARSA / TIDAK VALID!', detail: 'Diduga menggunakan foto/screenshot (Indikasi Titip Absen).' });
-        } else {
-          const today = new Date().toISOString().split('T')[0];
-          const presensiRef = ref(db, `presensi/${decoded.uid}`);
-          const snapshot = await get(presensiRef);
-          
-          let sudahAbsen = false;
-          if (snapshot.exists()) {
-             const records = snapshot.val();
-             sudahAbsen = Object.values(records).some(r => r.tanggal === today);
-          }
-
-          if (sudahAbsen) {
-             setStatus({ type: 'warning', msg: 'SUDAH PRESENSI', detail: `${decoded.nama} sudah melakukan presensi hari ini.` });
-          } else {
-             const jam = new Date().getHours();
-             const menit = new Date().getMinutes();
-             let kehadiranStatus = 'Hadir';
-             if (jam > 7 || (jam === 7 && menit > 15)) {
-               kehadiranStatus = 'Terlambat';
-             }
-             const newRecordRef = push(ref(db, `presensi/${decoded.uid}`));
-             await set(newRecordRef, {
-               tanggal: today, waktu: new Date().toISOString(), status: kehadiranStatus, nama: decoded.nama, kelas: decoded.kelas, uid: decoded.uid
-             });
-             setStatus({ type: 'success', msg: kehadiranStatus.toUpperCase(), detail: `Berhasil mencatat presensi untuk ${decoded.nama} (${decoded.kelas})` });
-          }
-        }
-      } catch (err) {
-        setStatus({ type: 'danger', msg: 'FORMAT QR SALAH', detail: 'QR Code ini tidak berasal dari sistem Portal Siswa.' });
-      }
-
-      setTimeout(() => {
-        setStatus({ type: '', msg: '', detail: null });
-        setIsScanning(true);
-        if(scanner) scanner.resume();
-      }, 3000);
-
-    }, (error) => { /* ignore */ });
-
     return () => {
-      try {
-        if (scanner) {
-          scanner.clear().catch(e => {});
-        }
-      } catch (err) {}
+      if (scannerRef.current && scannerRef.current.isScanning) {
+        scannerRef.current.stop().catch(() => {});
+      }
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div>
@@ -96,7 +124,11 @@ export default function ScannerAdmin() {
           overflow: hidden;
           background-color: transparent !important;
         }
-        /* Percantik tombol bawaan kamera */
+        /* Menyembunyikan tombol/fitur scan file gambar bawaan */
+        #qr-reader__dashboard_section_swaplink {
+          display: none !important;
+        }
+        /* Percantik tombol bawaan kamera jika ada */
         #qr-reader__dashboard_section_csr button {
           background: #4f46e5 !important;
           color: white !important;
@@ -111,14 +143,34 @@ export default function ScannerAdmin() {
           background: #4338ca !important;
         }
       `}</style>
+
       <h1 className="page-title mb-6">Pemindai Presensi (Scanner)</h1>
-      <p className="text-muted mb-8">Arahkan kamera ke QR Code di HP Siswa. Sistem otomatis menolak QR berupa *screenshot*.</p>
+      <p className="text-muted mb-8">Arahkan kamera ke QR Code di HP Siswa. Sistem otomatis menolak QR berupa <em>screenshot</em>.</p>
 
       <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
         {/* Kolom Kamera */}
         <div style={{ flex: '1 1 400px', maxWidth: '600px', margin: '0 auto' }}>
           <div className="card" style={{ height: '100%', padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div id="qr-reader" style={{ width: '100%', border: 'none' }}></div>
+            
+            {/* Tombol Kontrol Tunggal (Start / Stop) */}
+            <div style={{ marginTop: '1.5rem' }}>
+              {!isScanning ? (
+                <button 
+                  onClick={startScanning}
+                  style={{ background: '#4f46e5', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <Camera size={18} /> Start Scanning
+                </button>
+              ) : (
+                <button 
+                  onClick={stopScanning}
+                  style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <StopCircle size={18} /> Stop Scanning
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -128,9 +180,20 @@ export default function ScannerAdmin() {
             
             {!status.type ? (
                <div style={{ color: 'var(--text-muted)' }}>
-                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}><CheckCircle size={48} opacity={0.2} /></div>
+                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                   {/* Ikon Hand Holding Phone */}
+                   <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
+                     <rect x="7" y="3" width="10" height="16" rx="2" />
+                     <rect x="9" y="6" width="3" height="3" fill="currentColor" opacity="0.7"/>
+                     <rect x="13" y="6" width="2" height="2" fill="currentColor" opacity="0.7"/>
+                     <rect x="9" y="10" width="2" height="2" fill="currentColor" opacity="0.7"/>
+                     <rect x="13" y="10" width="2" height="2" fill="currentColor" opacity="0.7"/>
+                     <path d="M5 12c-1 0-2 1-2 2v2c0 2 1 3 3 3h4" />
+                     <path d="M12 19v2a2 2 0 0 0 2 2h3c2 0 4-2 4-4v-3" />
+                   </svg>
+                 </div>
                  <h2>Siap Memindai...</h2>
-                 <p>Menunggu QR Code masuk ke area kamera.</p>
+                 <p>Tekan tombol <strong>Start Scanning</strong> dan arahkan QR Code ke kamera.</p>
                </div>
             ) : status.type === 'success' ? (
                <div style={{ color: 'var(--success)', animation: 'popIn 0.3s ease-out' }}>

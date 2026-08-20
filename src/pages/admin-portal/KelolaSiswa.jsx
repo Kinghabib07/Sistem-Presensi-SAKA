@@ -195,8 +195,19 @@ export default function KelolaSiswa() {
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws);
 
+        // Helper untuk mencari data dengan membersihkan spasi pada header Excel
+        const getCleanValue = (row, possibleKeys) => {
+          for (let key of possibleKeys) {
+            const foundKey = Object.keys(row).find(k => k.trim().toLowerCase() === key.toLowerCase());
+            if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null) {
+              return String(row[foundKey]).trim();
+            }
+          }
+          return '';
+        };
+
         // --- 1. Tambah Kelas Baru Secara Otomatis ---
-        const kelasUnikExcel = [...new Set(data.map(row => String(row['Kelas'] || row['kelas']).trim()).filter(k => k && k !== 'undefined'))];
+        const kelasUnikExcel = [...new Set(data.map(row => getCleanValue(row, ['Kelas'])).filter(k => k && k !== 'undefined'))];
         const kelasBaru = kelasUnikExcel.filter(k => !kelasList.includes(k));
         
         for (let namaKelasBaru of kelasBaru) {
@@ -209,30 +220,33 @@ export default function KelolaSiswa() {
         let gagal = 0;
 
         for (let row of data) {
-          const nis = String(row['NIS'] || row['nis']);
-          const nama = String(row['Nama'] || row['nama']);
-          const kelas = String(row['Kelas'] || row['kelas']);
+          const nis = getCleanValue(row, ['NIS', 'nis']);
+          const nama = getCleanValue(row, ['Nama', 'nama', 'Nama Lengkap']);
+          const kelas = getCleanValue(row, ['Kelas', 'kelas']);
 
-          if (nis && nama && kelas && nis !== 'undefined') {
+          // Validasi ketat agar tidak lolos jika kosong atau bernilai string 'undefined'
+          if (nis && nama && kelas && nis !== 'undefined' && nama !== 'undefined' && kelas !== 'undefined') {
             try {
-              const email = `${nis.trim()}@sekolah.id`;
+              const email = `${nis}@sekolah.id`;
               const cred = await createUserWithEmailAndPassword(secondaryAuth, email, 'siswa123');
               
               await set(ref(db, `users/${cred.user.uid}`), {
                 uid: cred.user.uid,
-                nama_lengkap: nama.trim(),
-                kelas: kelas.trim(),
+                nama_lengkap: nama,
+                kelas: kelas,
                 role: 'siswa',
-                nis: nis.trim(),
+                nis: nis,
                 status: 'Aktif'
               });
               sukses++;
             } catch(e) {
               gagal++; 
             }
+          } else {
+            gagal++; // Hitung sebagai gagal jika ada data yang kosong
           }
         }
-        showAlert(`IMPORT EXCEL SELESAI!\n\n✅ Berhasil ditambahkan: ${sukses} siswa\n❌ Gagal/Duplikat NIS: ${gagal} siswa\n\nPassword default untuk semua siswa baru adalah: siswa123`, 'Hasil Import');
+        showAlert(`IMPORT EXCEL SELESAI!\n\n✅ Berhasil ditambahkan: ${sukses} siswa\n❌ Gagal/Format salah: ${gagal} siswa\n\nPassword default: siswa123`, 'Hasil Import');
       } catch (err) {
         showAlert('Format Excel tidak dikenali! Pastikan memiliki header kolom: NIS, Nama, Kelas.', 'Kesalahan Format');
       }
@@ -356,6 +370,7 @@ export default function KelolaSiswa() {
           <table className="table">
               <thead>
               <tr>
+                  <th style={{ width: '50px' }}>No</th>
                   <th>NIS</th>
                   <th>Nama Lengkap</th>
                   <th>Kelas</th>
@@ -364,59 +379,68 @@ export default function KelolaSiswa() {
               </tr>
               </thead>
               <tbody>
-              {currentSiswaData.length === 0 ? (
-                  <tr><td colSpan="5" className="text-center text-muted" style={{ padding: '2rem' }}>Tidak ada data siswa yang ditemukan.</td></tr>
-              ) : (
-                  currentSiswaData.map((s) => {
-                    const statusSiswa = s.status || 'Aktif';
-                    return (
-                      <tr key={s.id}>
-                          <td style={{ fontWeight: 600 }}>{s.nis || '-'}</td>
-                          <td>{s.nama_lengkap}</td>
-                          <td><span className="badge badge-info">{s.kelas}</span></td>
-                          <td>
-                            <span className={`badge ${statusSiswa === 'Aktif' ? 'badge-success' : 'badge-danger'}`} style={{ background: statusSiswa === 'Aktif' ? '#10b981' : '#ef4444', color: '#fff' }}>
-                              {statusSiswa}
-                            </span>
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
-                              {/* Edit Data */}
-                              <button 
-                                onClick={() => handleOpenEdit(s)} 
-                                className="btn btn-secondary" 
-                                title="Edit Siswa"
-                                style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', background: '#e5e7eb', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                              >
-                                <Edit3 size={15} />
-                              </button>
+            {currentSiswaData.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="text-center text-muted" style={{ padding: '2rem' }}>
+                  Tidak ada data siswa yang ditemukan.
+                </td>
+              </tr>
+            ) : (
+              currentSiswaData.map((s, index) => {
+                const statusSiswa = s.status || 'Aktif';
+                // Menghitung nomor urut berdasarkan halaman saat ini
+                const nomorUrut = (currentPage - 1) * itemsPerPage + index + 1;
+                
+                return (
+                  <tr key={s.id}>
+                    {/* Kolom No diisi dengan nomorUrut */}
+                    <td style={{ textAlign: 'center' }}>{nomorUrut}</td>
+                    <td>{s.nis || '-'}</td>
+                    <td>{s.nama_lengkap}</td>
+                    <td><span className="badge badge-info">{s.kelas}</span></td>
+                    <td>
+                      <span className={`badge ${statusSiswa === 'Aktif' ? 'badge-success' : 'badge-danger'}`} style={{ background: statusSiswa === 'Aktif' ? '#10b981' : '#ef4444', color: '#fff' }}>
+                        {statusSiswa}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
+                        {/* Edit Data */}
+                        <button 
+                          onClick={() => handleOpenEdit(s)} 
+                          className="btn btn-secondary" 
+                          title="Edit Siswa"
+                          style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', background: '#e5e7eb', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                          <Edit3 size={15} />
+                        </button>
 
-                              {/* Reset Password */}
-                              <button 
-                                onClick={() => handleResetPassword(s.nama_lengkap, s.nis)} 
-                                className="btn btn-warning" 
-                                title="Reset Password"
-                                style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                              >
-                                <KeyRound size={15} />
-                              </button>
+                        {/* Reset Password */}
+                        <button 
+                          onClick={() => handleResetPassword(s.nama_lengkap, s.nis)} 
+                          className="btn btn-warning" 
+                          title="Reset Password"
+                          style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                          <KeyRound size={15} />
+                        </button>
 
-                              {/* Nonaktifkan / Aktifkan Siswa */}
-                              <button 
-                                onClick={() => handleToggleStatus(s.id, s.nama_lengkap, statusSiswa)} 
-                                className="btn btn-danger" 
-                                title={statusSiswa === 'Aktif' ? 'Nonaktifkan Siswa' : 'Aktifkan Kembali'}
-                                style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', background: statusSiswa === 'Aktif' ? '#dc2626' : '#10b981', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                              >
-                                {statusSiswa === 'Aktif' ? <UserX size={15} /> : <UserCheck size={15} />}
-                              </button>
-                            </div>
-                          </td>
-                      </tr>
-                    );
-                  })
-              )}
-              </tbody>
+                        {/* Nonaktifkan / Aktifkan Siswa */}
+                        <button 
+                          onClick={() => handleToggleStatus(s.id, s.nama_lengkap, statusSiswa)} 
+                          className="btn btn-danger" 
+                          title={statusSiswa === 'Aktif' ? 'Nonaktifkan Siswa' : 'Aktifkan Kembali'}
+                          style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', background: statusSiswa === 'Aktif' ? '#dc2626' : '#10b981', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                          {statusSiswa === 'Aktif' ? <UserX size={15} /> : <UserCheck size={15} />}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
           </table>
           </div>
 
