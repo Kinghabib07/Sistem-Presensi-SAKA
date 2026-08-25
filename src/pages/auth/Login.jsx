@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { auth, db } from '../../services/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { ref, set } from 'firebase/database';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Copyright } from 'lucide-react';
 
 export default function Login() {
   const [nis, setNis] = useState('');
@@ -131,18 +131,20 @@ export default function Login() {
           <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
             {loading ? 'Memproses...' : 'Masuk Sistem'}
           </button>
-          
-          <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-            <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '0.5rem' }}>Bantu Testing Mode:</p>
-            <button 
-              type="button" 
-              onClick={buatAkunDummy} 
-              className="btn" 
-              disabled={loading}
-              style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.85rem', width: '100%' }}
-            >
-              Klik Untuk Buat 2 Akun Dummy (Admin & Siswa)
-            </button>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '5px',
+              marginTop: '12px',
+              fontSize: '0.7rem',
+              color: '#6c757d',
+              fontWeight: '500'
+            }}
+          >
+            <Copyright size={13} />
+            <span>KKN TEMATIK SEKOLAH UNIT I.C.3 - UAD</span>
           </div>
         </form>
       </div>
