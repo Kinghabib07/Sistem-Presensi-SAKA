@@ -55,6 +55,7 @@ function App() {
           <Route element={<DashboardLayout user={user} />}>
             <Route path="/admin/dashboard" element={<DashboardAdmin />} />
             <Route path="/admin/scanner" element={<ScannerAdmin />} />
+            <Route path="/admin/QRCode" element={<ScannerAdmin />} />
             <Route path="/admin/siswa" element={<KelolaSiswa />} />
             <Route path="/admin/kelas" element={<KelolaKelas />} />
             <Route path="/admin/presensi" element={<KelolaPresensi />} />

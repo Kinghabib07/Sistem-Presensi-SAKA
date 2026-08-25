@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import { db } from '../../services/firebase';
 import { ref, onValue } from 'firebase/database';
 import { Search, Calendar, FileText, Download, Printer } from 'lucide-react';
@@ -15,6 +16,7 @@ export default function LaporanPresensi() {
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const [selectedMonth, setSelectedMonth] = useState(todayStr.slice(0, 7)); // YYYY-MM
   const [selectedKelas, setSelectedKelas] = useState('Semua');
+  const [selectedAngkatan, setSelectedAngkatan] = useState('Semua');
   const [selectedStatus, setSelectedStatus] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -149,15 +151,23 @@ export default function LaporanPresensi() {
     return [];
   };
 
+  const getAngkatanFromKelas = (kelas) => {
+    if (!kelas) return 'Lainnya';
+    const match = String(kelas).match(/\b(X|XI|XII)\b/i);
+    if (match) return match[1].toUpperCase();
+    return 'Lainnya';
+  };
+
   const rawReportList = generateReportData();
 
   // Filter & Pencarian
   const filteredReportList = rawReportList.filter(item => {
     const matchKelas = selectedKelas === 'Semua' || item.kelas === selectedKelas;
+    const matchAngkatan = selectedAngkatan === 'Semua' || getAngkatanFromKelas(item.kelas) === selectedAngkatan;
     const matchStatus = modeRekap !== 'harian' || selectedStatus === 'Semua' || item.status === selectedStatus;
     const matchSearch = item.nama_lengkap.toLowerCase().includes(searchQuery.toLowerCase()) || 
                         item.nis.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchKelas && matchStatus && matchSearch;
+    return matchKelas && matchAngkatan && matchStatus && matchSearch;
   });
 
   // Pagination Logic
@@ -167,41 +177,87 @@ export default function LaporanPresensi() {
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedDate, selectedMonth, selectedKelas, selectedStatus, searchQuery, modeRekap]);
+  }, [selectedDate, selectedMonth, selectedKelas, selectedAngkatan, selectedStatus, searchQuery, modeRekap]);
 
   const totalPages = Math.ceil(filteredReportList.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredReportList.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Handler Export Excel (CSV format yang kompatibel dengan Excel)
+  // Handler Export Excel
   const handleExportExcel = () => {
-    if (filteredReportList.length === 0) {
+    const exportRowsFor = (rows) => {
+      if (modeRekap === 'harian') {
+        return rows.map(row => ({
+          NIS: row.nis,
+          'Nama Siswa': row.nama_lengkap,
+          Kelas: row.kelas,
+          Tanggal: row.periode,
+          Status: row.status,
+          'Waktu Masuk': row.waktu,
+          Keterangan: row.keterangan,
+        }));
+      }
+
+      return rows.map(row => ({
+        NIS: row.nis,
+        'Nama Siswa': row.nama_lengkap,
+        Kelas: row.kelas,
+        Periode: row.periode,
+        Hadir: row.hadir,
+        'Terlambat': row.terlambat,
+        'Tanpa Keterangan': row.tanpaKeterangan,
+      }));
+    };
+
+    const buildRowsForAngkatan = (angkatanValue) => {
+      const rows = rawReportList.filter(item => {
+        const matchKelas = selectedKelas === 'Semua' || item.kelas === selectedKelas;
+        const matchAngkatan = getAngkatanFromKelas(item.kelas) === angkatanValue;
+        const matchStatus = modeRekap !== 'harian' || selectedStatus === 'Semua' || item.status === selectedStatus;
+        const matchSearch = item.nama_lengkap.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.nis.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchKelas && matchAngkatan && matchStatus && matchSearch;
+      });
+      return exportRowsFor(rows);
+    };
+
+    const workbook = XLSX.utils.book_new();
+    const baseFileName = `Laporan_Presensi_${modeRekap}_${modeRekap === 'bulanan' ? selectedMonth : selectedDate}`;
+
+    if (selectedKelas === 'Semua' && selectedAngkatan === 'Semua') {
+      const sheetGroups = [
+        { name: 'Kelas X', value: 'X' },
+        { name: 'Kelas XI', value: 'XI' },
+        { name: 'Kelas XII', value: 'XII' },
+      ];
+
+      sheetGroups.forEach(({ name, value }) => {
+        const rows = buildRowsForAngkatan(value);
+        const worksheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{ NIS: '', 'Nama Siswa': '', Kelas: '', Tanggal: '', Status: '', 'Waktu Masuk': '', Keterangan: '' }]);
+        XLSX.utils.book_append_sheet(workbook, worksheet, name);
+      });
+    } else {
+      const rows = exportRowsFor(filteredReportList);
+      if (!rows.length) {
+        alert('Tidak ada data untuk diexport.');
+        return;
+      }
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const sheetName = selectedAngkatan === 'Semua' ? 'Data' : `Kelas ${selectedAngkatan}`;
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+    }
+
+    if (selectedKelas === 'Semua' && selectedAngkatan === 'Semua' && workbook.SheetNames.length === 0) {
       alert('Tidak ada data untuk diexport.');
       return;
     }
 
-    let csvContent = "data:text/csv;charset=utf-8,";
-    
-    if (modeRekap === 'harian') {
-      csvContent += "NIS,Nama Siswa,Kelas,Tanggal,Status,Waktu Masuk,Keterangan\r\n";
-      filteredReportList.forEach(row => {
-        csvContent += `"${row.nis}","${row.nama_lengkap}","${row.kelas}","${row.periode}","${row.status}","${row.waktu}","${row.keterangan}"\r\n`;
-      });
-    } else {
-      csvContent += "NIS,Nama Siswa,Kelas,Periode,Hadir,Terlambat,Tanpa Keterangan\r\n";
-      filteredReportList.forEach(row => {
-        csvContent += `"${row.nis}","${row.nama_lengkap}","${row.kelas}","${row.periode}",${row.hadir},${row.terlambat},${row.tanpaKeterangan}\r\n`;
-      });
-    }
+    const fileName = selectedKelas === 'Semua' && selectedAngkatan === 'Semua'
+      ? `${baseFileName}_3Sheet.xlsx`
+      : `${baseFileName}_${selectedKelas === 'Semua' ? 'Semua-Kelas' : selectedKelas}.xlsx`;
 
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Laporan_Presensi_${modeRekap}_${selectedKelas}_${modeRekap === 'bulanan' ? selectedMonth : selectedDate}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    XLSX.writeFile(workbook, fileName);
   };
 
   // Handler Export PDF (Menggunakan fitur print window browser yang distyling rapi)
@@ -218,8 +274,20 @@ export default function LaporanPresensi() {
     }
   };
 
+  const reportTitle = modeRekap === 'harian'
+    ? `Laporan Rekap Harian`
+    : modeRekap === 'mingguan'
+      ? `Laporan Rekap Mingguan`
+      : `Laporan Rekap Bulanan`;
+
+  const reportSubtitle = modeRekap === 'harian'
+    ? `Tanggal: ${selectedDate}`
+    : modeRekap === 'mingguan'
+      ? `Periode 7 Hari terakhir hingga: ${selectedDate}`
+      : `Bulan: ${selectedMonth}`;
+
   return (
-    <div>
+    <div className="laporan-print-area">
       {/* Header & Tombol Export */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }} className="no-print">
         <div>
@@ -289,6 +357,21 @@ export default function LaporanPresensi() {
             </div>
           )}
 
+          {/* Filter Angkatan */}
+          <div style={{ flex: '1 1 150px' }}>
+            <label className="form-label" style={{ fontSize: '0.8rem' }}>Filter Angkatan</label>
+            <select 
+              className="form-control"
+              value={selectedAngkatan}
+              onChange={(e) => setSelectedAngkatan(e.target.value)}
+            >
+              <option value="Semua">Semua</option>
+              <option value="X">Kelas X</option>
+              <option value="XI">Kelas XI</option>
+              <option value="XII">Kelas XII</option>
+            </select>
+          </div>
+
           {/* Filter Kelas */}
           <div style={{ flex: '1 1 180px' }}>
             <label className="form-label" style={{ fontSize: '0.8rem' }}>Filter Kelas</label>
@@ -342,12 +425,20 @@ export default function LaporanPresensi() {
 
       {/* TABEL LAPORAN */}
       <div className="card">
+        <div className="print-header" style={{ display: 'none' }}>
+          <div style={{ fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#6b7280', marginBottom: '0.35rem' }}>
+            Portal Kesiswaan
+          </div>
+          <h2 style={{ margin: 0, fontSize: '1.8rem', color: '#111827' }}>{reportTitle}</h2>
+          <p style={{ margin: '0.4rem 0 0', color: '#4b5563', fontSize: '0.92rem' }}>
+            {reportSubtitle} | Angkatan: {selectedAngkatan === 'Semua' ? 'Semua' : `Kelas ${selectedAngkatan}`} | Kelas: {selectedKelas}
+          </p>
+        </div>
+
         <div style={{ marginBottom: '1.5rem' }}>
           <h3 style={{ textTransform: 'capitalize' }}>Laporan Rekap {modeRekap}</h3>
           <p className="text-muted" style={{ fontSize: '0.85rem' }}>
-            {modeRekap === 'harian' && `Tanggal: ${selectedDate}`}
-            {modeRekap === 'mingguan' && `Periode 7 Hari terakhir hingga: ${selectedDate}`}
-            {modeRekap === 'bulanan' && `Bulan: ${selectedMonth}`} | Kelas: {selectedKelas}
+            {reportSubtitle} | Angkatan: {selectedAngkatan === 'Semua' ? 'Semua' : `Kelas ${selectedAngkatan}`} | Kelas: {selectedKelas}
           </p>
         </div>
 
@@ -434,17 +525,105 @@ export default function LaporanPresensi() {
       {/* CSS Khusus Cetak/PDF agar bersih dari elemen navigasi/filter */}
       <style>{`
         @media print {
+          @page {
+            size: A4 portrait;
+            margin: 8mm 7mm 8mm 7mm;
+          }
+
+          html, body {
+            background: #fff !important;
+            color: #000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          .sidebar,
+          .sidebar-overlay,
+          .mobile-header,
+          .bg-shape,
           .no-print {
             display: none !important;
           }
-          body {
+
+          .main-content {
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
             background: #fff !important;
-            color: #000 !important;
+            box-shadow: none !important;
           }
+
+          .laporan-print-area {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          .print-header {
+            display: block !important;
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
+            border-bottom: 2px solid #111827;
+          }
+
           .card {
             box-shadow: none !important;
             border: none !important;
+            background: #fff !important;
             padding: 0 !important;
+          }
+
+          .table-responsive {
+            overflow: visible !important;
+            width: 100% !important;
+          }
+
+          table {
+            width: 100% !important;
+            max-width: 100% !important;
+            table-layout: fixed !important;
+            font-size: 9.5pt !important;
+            border-collapse: collapse !important;
+            word-break: break-word !important;
+          }
+
+          th, td {
+            overflow-wrap: anywhere !important;
+            word-break: break-word !important;
+          }
+
+          thead th {
+            background: #f3f4f6 !important;
+            color: #111827 !important;
+            font-weight: 700 !important;
+            border: 1px solid #d1d5db !important;
+            padding: 6px !important;
+            text-align: center !important;
+          }
+
+          tbody td {
+            border: 1px solid #e5e7eb !important;
+            padding: 6px !important;
+            vertical-align: middle !important;
+          }
+
+          thead th:nth-child(1), tbody td:nth-child(1) { width: 6% !important; }
+          thead th:nth-child(2), tbody td:nth-child(2) { width: 14% !important; }
+          thead th:nth-child(3), tbody td:nth-child(3) { width: 20% !important; }
+          thead th:nth-child(4), tbody td:nth-child(4) { width: 12% !important; }
+          thead th:nth-child(5), tbody td:nth-child(5) { width: 12% !important; }
+          thead th:nth-child(6), tbody td:nth-child(6) { width: 18% !important; }
+          thead th:nth-child(7), tbody td:nth-child(7) { width: 18% !important; }
+
+          .badge {
+            box-shadow: none !important;
+            white-space: nowrap !important;
           }
         }
       `}</style>
