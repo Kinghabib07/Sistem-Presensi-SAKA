@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { db, secondaryAuth } from '../../services/firebase';
-import { ref, onValue, set, update, push } from 'firebase/database';
+import { ref, onValue, set, update, push, remove } from 'firebase/database';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { UploadCloud, Plus, Search, Edit3, KeyRound, UserCheck, UserX } from 'lucide-react';
+import { UploadCloud, Plus, Search, Edit3, KeyRound, UserCheck, UserX, Trash2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 export default function KelolaSiswa() {
@@ -170,6 +170,22 @@ export default function KelolaSiswa() {
     );
   };
 
+  // Hapus Siswa Secara Permanen
+  const handleDeleteSiswa = (id, nama) => {
+    showConfirm(
+      `PERINGATAN: Apakah Anda yakin ingin menghapus siswa "${nama}" secara permanen dari database? Tindakan ini tidak dapat dibatalkan.`,
+      async () => {
+        try {
+          await remove(ref(db, `users/${id}`));
+          showAlert(`Siswa ${nama} berhasil dihapus secara permanen.`, 'Sukses');
+        } catch (err) {
+          showAlert('Gagal menghapus siswa dari database.', 'Kesalahan');
+        }
+      },
+      'Konfirmasi Hapus Permanen'
+    );
+  };
+
   // Reset Password Siswa
   const handleResetPassword = (nama, nis) => {
     showConfirm(
@@ -214,7 +230,6 @@ export default function KelolaSiswa() {
             const newKelasRef = push(ref(db, 'kelas'));
             await set(newKelasRef, { nama: namaKelasBaru, status: 'Aktif' });
         }
-        // ---------------------------------------------
 
         let sukses = 0;
         let gagal = 0;
@@ -281,7 +296,7 @@ export default function KelolaSiswa() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
         <div>
-            <h1 className="page-title">Master Data: Siswa</h1>
+            <h1 className="page-title">Data Siswa</h1>
             <p className="text-muted">Kelola data siswa, status keaktifan, reset password, atau import massal.</p>
         </div>
         
@@ -433,6 +448,16 @@ export default function KelolaSiswa() {
                           style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', background: statusSiswa === 'Aktif' ? '#dc2626' : '#10b981', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                         >
                           {statusSiswa === 'Aktif' ? <UserX size={15} /> : <UserCheck size={15} />}
+                        </button>
+
+                        {/* Hapus Permanen */}
+                        <button 
+                          onClick={() => handleDeleteSiswa(s.id, s.nama_lengkap)} 
+                          className="btn btn-dark" 
+                          title="Hapus Permanen"
+                          style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', background: '#111827', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                          <Trash2 size={15} />
                         </button>
                       </div>
                     </td>

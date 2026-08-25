@@ -15,7 +15,7 @@ import Profile from './pages/shared/Profile';
 
 // Admin Portal
 import DashboardAdmin from './pages/admin-portal/DashboardAdmin';
-import ScannerAdmin from './pages/admin-portal/ScannerAdmin';
+import QRCodeAdmin from './pages/admin-portal/QRCodeAdmin';
 import KelolaSiswa from './pages/admin-portal/KelolaSiswa';
 import KelolaKelas from './pages/admin-portal/KelolaKelas';
 import KelolaPresensi from './pages/admin-portal/KelolaPresensi';
@@ -54,8 +54,7 @@ function App() {
         <Route element={<RoleBasedRoute user={user} allowedRole="admin" />}>
           <Route element={<DashboardLayout user={user} />}>
             <Route path="/admin/dashboard" element={<DashboardAdmin />} />
-            <Route path="/admin/scanner" element={<ScannerAdmin />} />
-            <Route path="/admin/QRCode" element={<ScannerAdmin />} />
+            <Route path="/admin/QRCode" element={<QRCodeAdmin />} />
             <Route path="/admin/siswa" element={<KelolaSiswa />} />
             <Route path="/admin/kelas" element={<KelolaKelas />} />
             <Route path="/admin/presensi" element={<KelolaPresensi />} />

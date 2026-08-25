@@ -40,7 +40,7 @@ export default function DashboardLayout({ user }) {
 
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={20} /> },
-    { name: 'QR Code', path: '/admin/scanner', icon: <QrCode size={20} /> },
+    { name: 'QR Code', path: '/admin/QRCode', icon: <QrCode size={20} /> },
     { name: 'Kelola Siswa', path: '/admin/siswa', icon: <Users size={20} /> },
     { name: 'Kelola Kelas', path: '/admin/kelas', icon: <BookOpen size={20} /> },
     { name: 'Kelola Presensi', path: '/admin/presensi', icon: <FileSpreadsheet size={20} /> },

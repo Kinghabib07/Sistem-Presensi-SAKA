@@ -6,7 +6,7 @@ import { Clock, CheckCircle, XCircle } from 'lucide-react';
 
 export default function DashboardSiswa() {
   const { userData } = useOutletContext();
-  const [statusHariIni, setStatusHariIni] = useState(null); // null = belum, 'Hadir', 'Terlambat', 'Absen'
+  const [statusHariIni, setStatusHariIni] = useState(null); // null = belum, 'Hadir', 'Terlambat', 'Tanpa Keterangan'
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -81,8 +81,8 @@ export default function DashboardSiswa() {
           <div className="stat-value" style={{ fontSize: '1.8rem' }}>{userData?.kelas || 'Belum diatur'}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-title">NIS / UID</div>
-          <div className="stat-value" style={{ fontSize: '1.2rem' }}>{userData?.uid?.substring(0, 8) || '-'}</div>
+          <div className="stat-title">NIS</div>
+          <div className="stat-value" style={{ fontSize: '1.2rem' }}>{userData?.nis || '-'}</div>
         </div>
       </div>
     </div>
