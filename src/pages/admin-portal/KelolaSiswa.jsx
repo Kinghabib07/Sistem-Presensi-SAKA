@@ -114,41 +114,85 @@ export default function KelolaSiswa() {
   // Simpan Data (Tambah / Edit)
   const handleSaveSiswa = async (e) => {
     e.preventDefault();
-    if (!newNis || !newNama || !newKelas) return;
+    const nis = newNis.trim();
+    const nama = newNama.trim();
+
+    if (!nis || !nama || !newKelas) {
+      showAlert('NIS, nama lengkap, dan kelas wajib diisi.', 'Data Belum Lengkap');
+      return;
+    }
+
+    if (!isEditMode && siswaList.some(siswa => (siswa.nis || '').trim() === nis)) {
+      showAlert(`NIS ${nis} sudah terdaftar. Gunakan NIS yang berbeda.`, 'NIS Duplikat');
+      return;
+    }
+
     setLoading(true);
 
     try {
       if (!isEditMode) {
         // Mode Tambah Baru
-        const email = `${newNis.trim()}@sekolah.id`;
-        const cred = await createUserWithEmailAndPassword(secondaryAuth, email, 'siswa123');
+        const email = `${nis}@sekolah.id`;
+        let uid = '';
+
+        try {
+          // Coba buat akun baru di Auth
+          const cred = await createUserWithEmailAndPassword(secondaryAuth, email, 'siswa123');
+          uid = cred.user.uid;
+        } catch (authError) {
+          // Jika email sudah ada di Auth (tapi database-nya terhapus sebelumnya)
+          if (authError.code === 'auth/email-already-in-use') {
+            const { signInWithEmailAndPassword, signOut } = await import('firebase/auth');
+            try {
+              // Login menggunakan password default untuk mendapatkan UID
+              const loginCred = await signInWithEmailAndPassword(secondaryAuth, email, 'siswa123');
+              uid = loginCred.user.uid;
+              await signOut(secondaryAuth); // Bersihkan sesi secondaryAuth
+            } catch (loginError) {
+              // Jika gagal login, berarti passwordnya sudah pernah diubah dan akun tertinggal
+              throw { code: 'auth/email-already-in-use-unrecoverable' };
+            }
+          } else {
+            throw authError; // Lemparkan error lain (misal invalid email)
+          }
+        }
         
-        await set(ref(db, `users/${cred.user.uid}`), {
-          uid: cred.user.uid,
-          nama_lengkap: newNama.trim(),
+        // Buat ulang atau timpa data di Realtime Database
+        await set(ref(db, `users/${uid}`), {
+          uid: uid,
+          nama_lengkap: nama,
           kelas: newKelas,
           role: 'siswa',
-          nis: newNis.trim(),
+          nis,
           status: 'Aktif'
         });
 
-        showAlert(`Berhasil menambahkan siswa ${newNama}!\nUsername/NIS: ${newNis}\nPassword default: siswa123`, 'Sukses');
+        showAlert(`Berhasil menambahkan siswa ${nama}!\nUsername/NIS: ${nis}\nPassword default: siswa123`, 'Sukses');
       } else {
         // Mode Edit Data
         await update(ref(db, `users/${activeId}`), {
-          nama_lengkap: newNama.trim(),
+          nama_lengkap: nama,
           kelas: newKelas,
           status: newStatus,
-          nis: newNis.trim()
+          nis
         });
-        showAlert(`Data siswa ${newNama} berhasil diperbarui!`, 'Sukses');
+        showAlert(`Data siswa ${nama} berhasil diperbarui!`, 'Sukses');
       }
 
       setModalOpen(false);
       setNewNis(''); 
       setNewNama('');
     } catch (err) {
-      showAlert('Gagal menyimpan data! Pastikan NIS unik atau format benar.', 'Kesalahan');
+      console.error('Gagal menyimpan data siswa:', err);
+      const errorMessages = {
+        'auth/email-already-in-use-unrecoverable': 'NIS sudah terdaftar di Authentication dengan password yang sudah diubah. Anda harus menghapus akun Auth secara manual lewat Firebase Console.',
+        'auth/email-already-in-use': 'NIS tersebut sudah memiliki akun.',
+        'auth/invalid-email': 'Format NIS tidak valid untuk dijadikan username.',
+        'auth/weak-password': 'Password default tidak memenuhi aturan Firebase.',
+        'auth/operation-not-allowed': 'Login dengan Email/Password belum diaktifkan di Firebase Authentication.',
+        'database/permission-denied': 'Akses database ditolak oleh Firebase Rules.'
+      };
+      showAlert(errorMessages[err.code] || `Gagal menyimpan data siswa.\nKode error: ${err.code || 'tidak diketahui'}`, 'Kesalahan');
     }
     setLoading(false);
   };
@@ -243,10 +287,27 @@ export default function KelolaSiswa() {
           if (nis && nama && kelas && nis !== 'undefined' && nama !== 'undefined' && kelas !== 'undefined') {
             try {
               const email = `${nis}@sekolah.id`;
-              const cred = await createUserWithEmailAndPassword(secondaryAuth, email, 'siswa123');
+              let uid = '';
+              try {
+                const cred = await createUserWithEmailAndPassword(secondaryAuth, email, 'siswa123');
+                uid = cred.user.uid;
+              } catch (authError) {
+                if (authError.code === 'auth/email-already-in-use') {
+                  const { signInWithEmailAndPassword, signOut } = await import('firebase/auth');
+                  try {
+                    const loginCred = await signInWithEmailAndPassword(secondaryAuth, email, 'siswa123');
+                    uid = loginCred.user.uid;
+                    await signOut(secondaryAuth);
+                  } catch (loginError) {
+                    throw { code: 'unrecoverable' }; // Lempar error jika gagal login (password sudah diganti)
+                  }
+                } else {
+                  throw authError;
+                }
+              }
               
-              await set(ref(db, `users/${cred.user.uid}`), {
-                uid: cred.user.uid,
+              await set(ref(db, `users/${uid}`), {
+                uid: uid,
                 nama_lengkap: nama,
                 kelas: kelas,
                 role: 'siswa',
