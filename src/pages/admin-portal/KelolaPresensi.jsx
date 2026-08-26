@@ -267,25 +267,35 @@ export default function KelolaPresensi() {
                     <td>{getBadgeStatus(item.status)}</td>
                     <td>{item.waktu}</td>
                     <td style={{ textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', alignItems: 'center' }}>
+                        
                         <button 
                           onClick={() => setSelectedDetail(item)} 
                           className="btn-icon" 
                           title="Lihat Detail"
-                          style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer' }}
+                          style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0.25rem' }}
                         >
                           <Eye size={18} />
                         </button>
-                        {item.hasAbsen && (
-                          <button 
-                            onClick={() => setSelectedDelete(item)} 
-                            className="btn-icon" 
-                            title="Hapus Presensi"
-                            style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        )}
+
+                        <button 
+                          onClick={() => item.hasAbsen ? setSelectedDelete(item) : null} 
+                          className="btn-icon" 
+                          title={item.hasAbsen ? "Hapus Presensi" : "Belum Ada Presensi"}
+                          style={{ 
+                            color: item.hasAbsen ? '#ef4444' : '#d1d5db', 
+                            background: 'none', 
+                            border: 'none', 
+                            cursor: item.hasAbsen ? 'pointer' : 'not-allowed', 
+                            display: 'flex', 
+                            alignItems: 'center',
+                            padding: '0.25rem'
+                          }}
+                          disabled={!item.hasAbsen}
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                        
                       </div>
                     </td>
                   </tr>

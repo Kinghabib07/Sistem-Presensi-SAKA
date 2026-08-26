@@ -1,60 +1,269 @@
+import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Users, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Users, AlertTriangle, CheckCircle, Clock, CalendarX } from 'lucide-react';
+import { ref, onValue } from 'firebase/database';
+import { db } from '../../services/firebase';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
-export default function Dashboard() {
+export default function DashboardAdmin() {
   const { userData } = useOutletContext();
+  const [totalSiswa, setTotalSiswa] = useState(0);
+  const [presensiHariIni, setPresensiHariIni] = useState({ hadir: 0, terlambat: 0, tanpaKeterangan: 0 });
+  const [weeklyData, setWeeklyData] = useState([]);
+  const [logTerkini, setLogTerkini] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // 1. Ambil Total Siswa Aktif
+    const usersRef = ref(db, 'users');
+    const unsubUsers = onValue(usersRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const count = Object.values(data).filter(u => u.role === 'siswa' && u.status === 'Aktif').length;
+        setTotalSiswa(count);
+      } else {
+        setTotalSiswa(0);
+      }
+    });
+
+    // 2. Ambil Presensi 7 Hari Terakhir & Hari Ini
+    const presensiRef = ref(db, 'presensi');
+    const unsubPresensi = onValue(presensiRef, (snapshot) => {
+      const presensiData = snapshot.val() || {};
+      
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const todayKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+      // Hari ini
+      const todayData = presensiData[todayKey] || {};
+      let hadir = 0, terlambat = 0, tanpaKeterangan = 0;
+      const logs = [];
+
+      Object.values(todayData).forEach((item, index) => {
+        if (item.status === 'Hadir') hadir++;
+        else if (item.status === 'Terlambat') terlambat++;
+        else if (item.status === 'Tanpa Keterangan') tanpaKeterangan++;
+        
+        logs.push({ ...item, id: item.uid || index });
+      });
+      setPresensiHariIni({ hadir, terlambat, tanpaKeterangan });
+      setLogTerkini(logs.sort((a,b) => b.waktu.localeCompare(a.waktu)).slice(0, 5));
+
+      // Mingguan (7 Hari terakhir)
+      const weekArr = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const k = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        const nameDate = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
+        
+        const dataDay = presensiData[k] || {};
+        let h = 0, t = 0, a = 0;
+        Object.values(dataDay).forEach(val => {
+          if (val.status === 'Hadir') h++;
+          if (val.status === 'Terlambat') t++;
+          if (val.status === 'Tanpa Keterangan') a++;
+        });
+        weekArr.push({ name: nameDate, Hadir: h, Terlambat: t, 'Tanpa Keterangan': a });
+      }
+      setWeeklyData(weekArr);
+      setLoading(false);
+    });
+
+    return () => {
+      unsubUsers();
+      unsubPresensi();
+    };
+  }, []);
+
+  const COLORS = ['#10b981', '#f59e0b', '#ef4444'];
+  const totalPresensi = presensiHariIni.hadir + presensiHariIni.terlambat + presensiHariIni.tanpaKeterangan;
+  const pieData = totalPresensi === 0 
+    ? [{ name: 'Belum Ada Data', value: 1, fill: '#e5e7eb' }]
+    : [
+        { name: 'Hadir', value: presensiHariIni.hadir },
+        { name: 'Terlambat', value: presensiHariIni.terlambat },
+        { name: 'Tanpa Keterangan', value: presensiHariIni.tanpaKeterangan }
+      ].filter(d => d.value > 0);
+
+  const getBadgeStatus = (status) => {
+    switch (status) {
+      case 'Hadir': return <span className="badge badge-success" style={{ background: '#10b981', color: '#fff' }}>Hadir</span>;
+      case 'Terlambat': return <span className="badge badge-warning" style={{ background: '#f59e0b', color: '#fff' }}>Terlambat</span>;
+      case 'Tanpa Keterangan': return <span className="badge badge-danger" style={{ background: '#ef4444', color: '#fff' }}>Tanpa Keterangan</span>;
+      default: return <span className="badge badge-secondary">{status}</span>;
+    }
+  };
 
   return (
-    <div>
+    <div className="dashboard-container" style={{ animation: 'fadeIn 0.5s ease' }}>
+      <style>
+        {`
+          @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+          .hover-scale { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+          .hover-scale:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+          .chart-card { background: #fff; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        `}
+      </style>
+
       <div className="mb-8">
         <h1 className="page-title">Ringkasan Hari Ini</h1>
         <p className="text-muted" style={{ fontSize: '1.1rem' }}>
-          Selamat datang kembali, <strong>{userData ? userData.nama_lengkap : 'Memuat...'}</strong>
+          Selamat datang kembali, <strong>{userData ? userData.nama_lengkap : 'Admin'}</strong>
         </p>
       </div>
 
-      <div className="stats-grid">
-        <div className="stat-card">
+      {/* STAT CARDS */}
+      <div className="stats-grid" style={{ marginBottom: '2rem' }}>
+        <div className="stat-card hover-scale">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <div className="stat-title">Total Siswa Terdaftar</div>
-              <div className="stat-value">0</div>
+              <div className="stat-title">Total Siswa Aktif</div>
+              <div className="stat-value">{loading ? '...' : totalSiswa}</div>
             </div>
-            <div style={{ padding: '1rem', background: 'rgba(79, 70, 229, 0.1)', borderRadius: 'var(--radius-full)', color: 'var(--primary)' }}>
+            <div style={{ padding: '1rem', background: 'rgba(79, 70, 229, 0.1)', borderRadius: '50%', color: 'var(--primary)' }}>
               <Users size={28} />
             </div>
           </div>
         </div>
 
-        <div className="stat-card" style={{ borderLeftColor: 'var(--danger)' }}>
+        <div className="stat-card hover-scale" style={{ borderLeftColor: '#10b981' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <div className="stat-title">Pelanggaran Baru</div>
-              <div className="stat-value">0</div>
+              <div className="stat-title">Hadir Hari Ini</div>
+              <div className="stat-value" style={{ color: '#10b981' }}>{loading ? '...' : presensiHariIni.hadir}</div>
             </div>
-            <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: 'var(--radius-full)', color: 'var(--danger)' }}>
-              <AlertTriangle size={28} />
+            <div style={{ padding: '1rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '50%', color: '#10b981' }}>
+              <CheckCircle size={28} />
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card hover-scale" style={{ borderLeftColor: '#f59e0b' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <div className="stat-title">Terlambat Hari Ini</div>
+              <div className="stat-value" style={{ color: '#f59e0b' }}>{loading ? '...' : presensiHariIni.terlambat}</div>
+            </div>
+            <div style={{ padding: '1rem', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '50%', color: '#f59e0b' }}>
+              <Clock size={28} />
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card hover-scale" style={{ borderLeftColor: '#ef4444' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <div className="stat-title">Tanpa Keterangan</div>
+              <div className="stat-value" style={{ color: '#ef4444' }}>{loading ? '...' : presensiHariIni.tanpaKeterangan}</div>
+            </div>
+            <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '50%', color: '#ef4444' }}>
+              <CalendarX size={28} />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="card">
+      {/* CHARTS SECTION */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
+        
+        {/* PIE CHART */}
+        <div className="chart-card hover-scale">
+          <h3 className="mb-4" style={{ fontSize: '1.1rem', color: '#374151' }}>Rasio Kehadiran Hari Ini</h3>
+          <div style={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={70}
+                  outerRadius={100}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {totalPresensi === 0 
+                    ? <Cell fill="#e5e7eb" />
+                    : pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))
+                  }
+                </Pie>
+                <Tooltip 
+                  formatter={(value) => [value, 'Siswa']} 
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+                />
+                {totalPresensi > 0 && <Legend verticalAlign="bottom" height={36} />}
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          {totalPresensi === 0 && (
+            <p className="text-center text-muted" style={{ marginTop: '-2rem' }}>Belum ada data presensi hari ini.</p>
+          )}
+        </div>
+
+        {/* BAR CHART */}
+        <div className="chart-card hover-scale" style={{ gridColumn: 'span 2' }}>
+          <h3 className="mb-4" style={{ fontSize: '1.1rem', color: '#374151' }}>Tren Presensi 7 Hari Terakhir</h3>
+          <div style={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer>
+              <BarChart data={weeklyData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <Tooltip 
+                  cursor={{ fill: 'rgba(243, 244, 246, 0.4)' }}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+                />
+                <Legend iconType="circle" />
+                <Bar dataKey="Hadir" stackId="a" fill="#10b981" radius={[0, 0, 4, 4]} />
+                <Bar dataKey="Terlambat" stackId="a" fill="#f59e0b" />
+                <Bar dataKey="Tanpa Keterangan" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+      </div>
+
+      {/* LOG TERKINI */}
+      <div className="card hover-scale">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h2>Log Terkini (Dummy)</h2>
+          <h3 style={{ fontSize: '1.1rem', color: '#374151' }}>Log Presensi Terbaru Hari Ini</h3>
         </div>
         <div className="table-responsive">
           <table className="table">
             <thead>
               <tr>
+                <th>Waktu</th>
                 <th>Nama Siswa</th>
+                <th>Kelas</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td colSpan="2" className="text-muted text-center">Belum ada aktivitas. Silakan kelola data siswa terlebih dahulu.</td>
-              </tr>
+              {loading ? (
+                <tr><td colSpan="4" className="text-center text-muted">Memuat data...</td></tr>
+              ) : logTerkini.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="text-muted text-center" style={{ padding: '3rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                      <AlertTriangle size={40} color="#9ca3af" />
+                      <span>Belum ada presensi yang masuk hari ini.</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                logTerkini.map(log => (
+                  <tr key={log.id}>
+                    <td style={{ fontWeight: 600, color: '#4b5563' }}>{log.waktu}</td>
+                    <td>{log.nama_lengkap}</td>
+                    <td>{log.kelas}</td>
+                    <td>{getBadgeStatus(log.status)}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

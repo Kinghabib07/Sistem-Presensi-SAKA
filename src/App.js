@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { auth } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { Toaster } from 'react-hot-toast';
 
 // Layouts & Security
 import DashboardLayout from './layouts/DashboardLayout';
@@ -45,37 +46,50 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={!user ? <Login /> : <Navigate to="/redirect" />} />
-        <Route path="/redirect" element={<RoleRedirector user={user} />} />
-        
-        {/* Portal Admin */}
-        <Route element={<RoleBasedRoute user={user} allowedRole="admin" />}>
-          <Route element={<DashboardLayout user={user} />}>
-            <Route path="/admin/dashboard" element={<DashboardAdmin />} />
-            <Route path="/admin/QRCode" element={<QRCodeAdmin />} />
-            <Route path="/admin/siswa" element={<KelolaSiswa />} />
-            <Route path="/admin/kelas" element={<KelolaKelas />} />
-            <Route path="/admin/presensi" element={<KelolaPresensi />} />
-            <Route path="/admin/koreksi" element={<KoreksiPresensi />} />
-            <Route path="/admin/laporan" element={<LaporanAdmin />} />
-            <Route path="/admin/profile" element={<Profile />} />
+    <>
+      <Toaster 
+        position="top-right" 
+        toastOptions={{
+          style: {
+            padding: '16px',
+            color: '#374151',
+            borderRadius: '8px',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+          },
+        }}
+      />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={!user ? <Login /> : <Navigate to="/redirect" />} />
+          <Route path="/redirect" element={<RoleRedirector user={user} />} />
+          
+          {/* Portal Admin */}
+          <Route element={<RoleBasedRoute user={user} allowedRole="admin" />}>
+            <Route element={<DashboardLayout user={user} />}>
+              <Route path="/admin/dashboard" element={<DashboardAdmin />} />
+              <Route path="/admin/QRCode" element={<QRCodeAdmin />} />
+              <Route path="/admin/siswa" element={<KelolaSiswa />} />
+              <Route path="/admin/kelas" element={<KelolaKelas />} />
+              <Route path="/admin/presensi" element={<KelolaPresensi />} />
+              <Route path="/admin/koreksi" element={<KoreksiPresensi />} />
+              <Route path="/admin/laporan" element={<LaporanAdmin />} />
+              <Route path="/admin/profile" element={<Profile />} />
+            </Route>
           </Route>
-        </Route>
 
-        {/* Portal Siswa */}
-        <Route element={<RoleBasedRoute user={user} allowedRole="siswa" />}>
-          <Route element={<StudentLayout user={user} />}>
-            <Route path="/siswa/dashboard" element={<DashboardSiswa />} />
-            <Route path="/siswa/presensi" element={<PresensiSiswa />} />
-            <Route path="/siswa/riwayat" element={<RiwayatSiswa />} />
-            <Route path="/siswa/rekap" element={<RekapSiswa />} />
-            <Route path="/siswa/profile" element={<Profile />} />
+          {/* Portal Siswa */}
+          <Route element={<RoleBasedRoute user={user} allowedRole="siswa" />}>
+            <Route element={<StudentLayout user={user} />}>
+              <Route path="/siswa/dashboard" element={<DashboardSiswa />} />
+              <Route path="/siswa/presensi" element={<PresensiSiswa />} />
+              <Route path="/siswa/riwayat" element={<RiwayatSiswa />} />
+              <Route path="/siswa/rekap" element={<RekapSiswa />} />
+              <Route path="/siswa/profile" element={<Profile />} />
+            </Route>
           </Route>
-        </Route>
-      </Routes>
-    </BrowserRouter>
+        </Routes>
+      </BrowserRouter>
+    </>
   );
 }
 

@@ -23,14 +23,6 @@ export default function KoreksiPresensi() {
   const [formKeterangan, setFormKeterangan] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // State untuk Pop-up Alert Kustom
-  const [popupAlert, setPopupAlert] = useState({
-    isOpen: false,
-    title: '',
-    message: '',
-    type: 'error' // 'error' atau 'success'
-  });
-
   useEffect(() => {
     // 1. Ambil data kelas untuk dropdown filter
     const kelasRef = ref(db, 'kelas');
@@ -154,11 +146,8 @@ export default function KoreksiPresensi() {
     if (!activeSiswa) return;
 
     if (hasError) {
-      setPopupAlert({
-        isOpen: true,
-        title: 'Peringatan Validasi',
-        message: 'Gagal menyimpan: Periksa kembali format atau ketentuan waktu yang sesuai dengan status kehadiran.',
-        type: 'error'
+      import('react-hot-toast').then(({ toast }) => {
+        toast.error('Gagal menyimpan: Periksa kembali format atau ketentuan waktu yang sesuai dengan status kehadiran.', { duration: 5000 });
       });
       return;
     }
@@ -184,22 +173,16 @@ export default function KoreksiPresensi() {
         auditTrail: auditString
       });
 
-      setPopupAlert({
-        isOpen: true,
-        title: 'Berhasil',
-        message: 'Koreksi presensi berhasil disimpan!',
-        type: 'success'
+      import('react-hot-toast').then(({ toast }) => {
+        toast.success('Koreksi presensi berhasil disimpan!', { duration: 4000 });
       });
 
       setModalKoreksiOpen(false);
       setActiveSiswa(null);
     } catch (error) {
       console.error('Gagal menyimpan koreksi:', error);
-      setPopupAlert({
-        isOpen: true,
-        title: 'Kesalahan',
-        message: 'Terjadi kesalahan saat menyimpan koreksi ke database.',
-        type: 'error'
+      import('react-hot-toast').then(({ toast }) => {
+        toast.error('Terjadi kesalahan saat menyimpan koreksi ke database.', { duration: 5000 });
       });
     } finally {
       setSubmitting(false);
@@ -475,42 +458,6 @@ export default function KoreksiPresensi() {
         </div>
       )}
 
-      {/* POP-UP ALERT MODAL KUSTOM */}
-      {popupAlert.isOpen && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-          backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center',
-          alignItems: 'center', zIndex: 1100, padding: '1rem'
-        }}>
-          <div className="card" style={{ width: '100%', maxWidth: '380px', background: '#fff', textAlign: 'center', padding: '1.5rem' }}>
-            
-            {/* Ikon Berdasarkan Tipe */}
-            <div style={{ 
-              width: '48px', height: '48px', borderRadius: '50%', 
-              backgroundColor: popupAlert.type === 'success' ? '#d1fae5' : '#fee2e2', 
-              color: popupAlert.type === 'success' ? '#10b981' : '#ef4444', 
-              display: 'flex', alignItems: 'center', justifyContent: 'center', 
-              margin: '0 auto 1rem auto', fontSize: '1.5rem', fontWeight: 'bold' 
-            }}>
-              {popupAlert.type === 'success' ? '✓' : '!'}
-            </div>
-
-            <h4 style={{ marginBottom: '0.5rem', color: '#1f2937' }}>{popupAlert.title}</h4>
-            <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              {popupAlert.message}
-            </p>
-
-            <button 
-              type="button" 
-              className="btn btn-primary"
-              onClick={() => setPopupAlert({ ...popupAlert, isOpen: false })}
-              style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', cursor: 'pointer' }}
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

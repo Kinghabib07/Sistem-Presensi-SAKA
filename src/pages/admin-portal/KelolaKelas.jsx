@@ -23,20 +23,22 @@ export default function KelolaKelas() {
   const [selectedSiswaIds, setSelectedSiswaIds] = useState([]);
   const [searchSiswaQuery, setSearchSiswaQuery] = useState('');
 
-  // Modal Alert / Confirm State (Pengganti alert & window.confirm bawaan browser)
-  const [modalAlertOpen, setModalAlertOpen] = useState(false);
-  const [alertMessage, setAlertMessage] = useState('');
-  const [alertTitle, setAlertTitle] = useState('Informasi');
-
+  // Modal Confirm State
   const [modalConfirmOpen, setModalConfirmOpen] = useState(false);
   const [confirmTitle, setConfirmTitle] = useState('Konfirmasi');
   const [confirmMessage, setConfirmMessage] = useState('');
   const [onConfirmAction, setOnConfirmAction] = useState(null);
 
   const showAlert = (message, title = 'Informasi') => {
-    setAlertMessage(message);
-    setAlertTitle(title);
-    setModalAlertOpen(true);
+    import('react-hot-toast').then(({ toast }) => {
+      if (title.toLowerCase().includes('sukses') || title.toLowerCase().includes('berhasil')) {
+        toast.success(message, { duration: 4000 });
+      } else if (title.toLowerCase().includes('kesalahan') || title.toLowerCase().includes('gagal') || title.toLowerCase().includes('peringatan')) {
+        toast.error(message, { duration: 5000 });
+      } else {
+        toast(message, { icon: 'ℹ️' });
+      }
+    });
   };
 
   const showConfirm = (message, action, title = 'Konfirmasi') => {
@@ -434,21 +436,10 @@ export default function KelolaKelas() {
         </div>
       )}
 
-      {/* MODAL ALERT CUSTOM */}
-      {modalAlertOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1200, padding: '1rem' }}>
-          <div className="card" style={{ width: '100%', maxWidth: '380px', background: '#fff', textAlign: 'center', padding: '1.5rem' }}>
-            <h3 className="mb-2">{alertTitle}</h3>
-            <p className="text-muted mb-4" style={{ fontSize: '0.9rem' }}>{alertMessage}</p>
-            <button type="button" className="btn btn-primary" onClick={() => setModalAlertOpen(false)} style={{ width: '100%', padding: '0.5rem' }}>OK</button>
-          </div>
-        </div>
-      )}
-
       {/* MODAL CONFIRM CUSTOM */}
       {modalConfirmOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1200, padding: '1rem' }}>
-          <div className="card" style={{ width: '100%', maxWidth: '400px', background: '#fff', padding: '1.5rem' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '400px', background: '#fff', padding: '1.5rem', animation: 'fadeIn 0.2s ease-out' }}>
             <h3 className="mb-2">{confirmTitle}</h3>
             <p className="text-muted mb-4" style={{ fontSize: '0.9rem' }}>{confirmMessage}</p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
