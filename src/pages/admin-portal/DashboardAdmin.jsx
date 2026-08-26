@@ -92,7 +92,7 @@ export default function DashboardAdmin() {
     return () => unsubUsers();
   }, []);
 
-  const COLORS = ['#10b981', '#f59e0b', '#ef4444'];
+  const COLORS = ['#10b981', '#ef4444', '#f59e0b'];
   const totalPresensi = presensiHariIni.hadir + presensiHariIni.terlambat + presensiHariIni.tanpaKeterangan;
   const pieData = totalPresensi === 0 
     ? [{ name: 'Belum Ada Data', value: 1, fill: '#e5e7eb' }]
@@ -105,8 +105,8 @@ export default function DashboardAdmin() {
   const getBadgeStatus = (status) => {
     switch (status) {
       case 'Hadir': return <span className="badge badge-success" style={{ background: '#10b981', color: '#fff' }}>Hadir</span>;
-      case 'Terlambat': return <span className="badge badge-warning" style={{ background: '#f59e0b', color: '#fff' }}>Terlambat</span>;
-      case 'Tanpa Keterangan': return <span className="badge badge-danger" style={{ background: '#ef4444', color: '#fff' }}>Tanpa Keterangan</span>;
+      case 'Terlambat': return <span className="badge badge-warning" style={{ background: '#ef4444', color: '#fff' }}>Terlambat</span>;
+      case 'Tanpa Keterangan': return <span className="badge badge-danger" style={{ background: '#f59e0b', color: '#fff' }}>Tanpa Keterangan</span>;
       default: return <span className="badge badge-secondary" style={{ background: '#9ca3af', color: '#fff' }}>{status}</span>;
     }
   };
@@ -155,25 +155,25 @@ export default function DashboardAdmin() {
           </div>
         </div>
 
-        <div className="stat-card hover-scale" style={{ borderLeftColor: '#f59e0b' }}>
+        <div className="stat-card hover-scale" style={{ borderLeftColor: '#ef4444' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <div className="stat-title">Terlambat Hari Ini</div>
-              <div className="stat-value" style={{ color: '#f59e0b' }}>{loading ? '...' : presensiHariIni.terlambat}</div>
+              <div className="stat-value" style={{ color: '#ef4444' }}>{loading ? '...' : presensiHariIni.terlambat}</div>
             </div>
-            <div style={{ padding: '1rem', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '50%', color: '#f59e0b' }}>
+            <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '50%', color: '#ef4444' }}>
               <Clock size={28} />
             </div>
           </div>
         </div>
 
-        <div className="stat-card hover-scale" style={{ borderLeftColor: '#ef4444' }}>
+        <div className="stat-card hover-scale" style={{ borderLeftColor: '#f59e0b' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <div className="stat-title">Tanpa Keterangan</div>
-              <div className="stat-value" style={{ color: '#ef4444' }}>{loading ? '...' : presensiHariIni.tanpaKeterangan}</div>
+              <div className="stat-value" style={{ color: '#f59e0b' }}>{loading ? '...' : presensiHariIni.tanpaKeterangan}</div>
             </div>
-            <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '50%', color: '#ef4444' }}>
+            <div style={{ padding: '1rem', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '50%', color: '#f59e0b' }}>
               <CalendarX size={28} />
             </div>
           </div>
@@ -233,8 +233,8 @@ export default function DashboardAdmin() {
                 />
                 <Legend iconType="circle" />
                 <Bar dataKey="Hadir" stackId="a" fill="#10b981" radius={[0, 0, 4, 4]} />
-                <Bar dataKey="Terlambat" stackId="a" fill="#f59e0b" />
-                <Bar dataKey="Tanpa Keterangan" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Terlambat" stackId="a" fill="#ef4444" />
+                <Bar dataKey="Tanpa Keterangan" stackId="a" fill="#f59e0b" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
