@@ -41,9 +41,9 @@ export default function RekapSiswa() {
 
   const filteredData = useMemo(() => {
     return data.filter(item => {
-      const dateObj = new Date(item.tanggal);
+      const dateObj = new Date(item.tanggal || item.id);
       return (dateObj.getMonth() + 1) === Number(bulan) && dateObj.getFullYear() === Number(tahun);
-    }).sort((a, b) => new Date(a.waktu) - new Date(b.waktu));
+    }).sort((a, b) => new Date(a.tanggal || a.id) - new Date(b.tanggal || b.id));
   }, [data, bulan, tahun]);
 
   const stats = useMemo(() => {
@@ -112,9 +112,17 @@ export default function RekapSiswa() {
               ) : (
                 filteredData.map((item) => (
                   <tr key={item.id}>
-                    <td><strong>{item.tanggal}</strong></td>
+                    <td><strong>{item.tanggal || item.id}</strong></td>
                     <td style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                      {new Date(item.waktu).toLocaleTimeString('id-ID')} WIB
+                      {item.auditTrail ? (
+                        <span style={{ fontStyle: 'italic', color: '#f59e0b' }}>Diubah Admin</span>
+                      ) : item.waktu === '-' ? (
+                        '-'
+                      ) : item.waktu.includes('T') ? (
+                        `${new Date(item.waktu).toLocaleTimeString('id-ID')} WIB`
+                      ) : (
+                        `${item.waktu} WIB`
+                      )}
                     </td>
                     <td>
                       <span className={`badge badge-${item.status === 'Hadir' ? 'success' : item.status === 'Terlambat' ? 'warning' : 'danger'}`}>

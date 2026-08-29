@@ -23,8 +23,8 @@ export default function RiwayatSiswa() {
               arr.push({ id: date, ...dateData[userData.uid] });
             }
           });
-          // Urutkan dari yang terbaru (descending)
-          arr.sort((a, b) => new Date(b.waktu) - new Date(a.waktu));
+          // Urutkan dari tanggal yang terbaru (descending)
+          arr.sort((a, b) => new Date(b.tanggal || b.id) - new Date(a.tanggal || a.id));
           setData(arr);
         } else {
           setData([]);
@@ -58,9 +58,17 @@ export default function RiwayatSiswa() {
               ) : (
                 data.map((item) => (
                   <tr key={item.id}>
-                    <td><strong>{item.tanggal}</strong></td>
+                    <td><strong>{item.tanggal || item.id}</strong></td>
                     <td style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                      {new Date(item.waktu).toLocaleTimeString('id-ID')} WIB
+                      {item.auditTrail ? (
+                        <span style={{ fontStyle: 'italic', color: '#f59e0b' }}>Diubah Admin</span>
+                      ) : item.waktu === '-' ? (
+                        '-'
+                      ) : item.waktu.includes('T') ? (
+                        `${new Date(item.waktu).toLocaleTimeString('id-ID')} WIB`
+                      ) : (
+                        `${item.waktu} WIB`
+                      )}
                     </td>
                     <td>
                       <span className={`badge badge-${item.status === 'Hadir' ? 'success' : item.status === 'Terlambat' ? 'warning' : 'danger'}`}>
