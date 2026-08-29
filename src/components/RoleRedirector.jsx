@@ -9,6 +9,13 @@ export default function RoleRedirector({ user }) {
 
   useEffect(() => {
     async function fetchRole() {
+      // Super Admin Fallback
+      if (user.email === 'admin@sekolah.id' || user.email === 'admin@gmail.com') {
+        setRole('admin');
+        setLoading(false);
+        return;
+      }
+
       try {
         const snapshot = await get(child(ref(db), `users/${user.uid}`));
         if (snapshot.exists() && snapshot.val().role) {

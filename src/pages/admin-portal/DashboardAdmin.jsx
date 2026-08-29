@@ -23,12 +23,9 @@ export default function DashboardAdmin() {
 
     const unsubUsers = onValue(usersRef, (snapUsers) => {
       const usersData = snapUsers.val() || {};
-      
-      // Hitung total siswa aktif
       const count = Object.values(usersData).filter(u => u.role === 'siswa' && u.status === 'Aktif').length;
       setTotalSiswa(count);
 
-      // Ambil data presensi
       const unsubPresensi = onValue(presensiRef, (snapPresensi) => {
         const presensiData = snapPresensi.val() || {};
         
@@ -36,7 +33,6 @@ export default function DashboardAdmin() {
         const pad = (n) => String(n).padStart(2, '0');
         const todayKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
-        // Hari ini
         const todayData = presensiData[todayKey] || {};
         let hadir = 0, terlambat = 0, tanpaKeterangan = 0;
         const loggedList = [];
@@ -62,10 +58,8 @@ export default function DashboardAdmin() {
         });
 
         setPresensiHariIni({ hadir, terlambat, tanpaKeterangan });
-        // Urutkan dari waktu masuk terbaru (descending) dan batasi 5 atau tampilkan semua (sesuaikan kebutuhan, disini diurutkan berdasarkan waktu)
         setPresensiList(loggedList.sort((a, b) => b.waktu.localeCompare(a.waktu)));
 
-        // Mingguan (7 Hari terakhir)
         const weekArr = [];
         for (let i = 6; i >= 0; i--) {
           const d = new Date();
@@ -84,9 +78,15 @@ export default function DashboardAdmin() {
         }
         setWeeklyData(weekArr);
         setLoading(false);
+      }, (error) => {
+        console.error("Gagal mengambil data presensi:", error);
+        setLoading(false);
       });
 
       return () => unsubPresensi();
+    }, (error) => {
+      console.error("Gagal mengambil data users:", error);
+      setLoading(false);
     });
 
     return () => unsubUsers();
