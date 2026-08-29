@@ -31,6 +31,8 @@ export default function LaporanPresensi() {
       } else {
         setKelasList([]);
       }
+    }, (error) => {
+      console.error("Gagal ambil kelas:", error);
     });
 
     // 2. Ambil data users (siswa)
@@ -46,6 +48,8 @@ export default function LaporanPresensi() {
       } else {
         setUsersList([]);
       }
+    }, (error) => {
+      console.error("Gagal ambil users:", error);
     });
 
     // 3. Ambil data seluruh presensi
@@ -53,6 +57,9 @@ export default function LaporanPresensi() {
     const unsubPresensi = onValue(presensiRef, (snapshot) => {
       const data = snapshot.val() || {};
       setPresensiRaw(data);
+      setLoading(false);
+    }, (error) => {
+      console.error("Gagal ambil presensi:", error);
       setLoading(false);
     });
 

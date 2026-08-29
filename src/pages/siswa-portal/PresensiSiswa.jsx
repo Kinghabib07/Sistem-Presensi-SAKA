@@ -53,14 +53,10 @@ export default function PresensiSiswa() {
               setStatus({ type: 'danger', msg: 'QR CODE KEDALUWARSA!', detail: 'QR Code Admin sudah kadaluarsa. Minta admin memperbarui.' });
             } else {
               const today = new Date().toISOString().split('T')[0];
-              const presensiRef = ref(db, `presensi/${userData.uid}`);
+              const presensiRef = ref(db, `presensi/${today}/${userData.uid}`);
               const snapshot = await get(presensiRef);
               
-              let sudahAbsen = false;
-              if (snapshot.exists()) {
-                 const records = snapshot.val();
-                 sudahAbsen = Object.values(records).some(r => r.tanggal === today);
-              }
+              let sudahAbsen = snapshot.exists();
 
               if (sudahAbsen) {
                  setStatus({ type: 'warning', msg: 'SUDAH PRESENSI', detail: `Kamu sudah melakukan presensi hari ini.` });
@@ -72,8 +68,7 @@ export default function PresensiSiswa() {
                    kehadiranStatus = 'Terlambat';
                  }
 
-                 const newRecordRef = push(ref(db, `presensi/${userData.uid}`));
-                 await set(newRecordRef, {
+                 await set(presensiRef, {
                    tanggal: today, 
                    waktu: new Date().toISOString(), 
                    status: kehadiranStatus, 

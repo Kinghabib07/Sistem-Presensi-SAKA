@@ -15,18 +15,14 @@ export default function DashboardSiswa() {
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       
       try {
-        const presensiRef = ref(db, `presensi/${userData.uid}`);
+        const presensiRef = ref(db, `presensi/${today}/${userData.uid}`);
         const snapshot = await get(presensiRef);
         
         if (snapshot.exists()) {
           const data = snapshot.val();
-          // Cari apakah ada presensi hari ini
-          const recordHariIni = Object.values(data).find(item => item.tanggal === today);
-          if (recordHariIni) {
-            setStatusHariIni(recordHariIni.status);
-          } else {
-            setStatusHariIni(null); // Belum presensi
-          }
+          setStatusHariIni(data.status);
+        } else {
+          setStatusHariIni(null); // Belum presensi
         }
       } catch (error) {
         console.error("Gagal mengecek presensi", error);

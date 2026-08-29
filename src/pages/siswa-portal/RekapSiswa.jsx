@@ -17,10 +17,16 @@ export default function RekapSiswa() {
       if (!userData) return;
       setLoading(true);
       try {
-        const snapshot = await get(child(ref(db), `presensi/${userData.uid}`));
+        const snapshot = await get(ref(db, 'presensi'));
         if (snapshot.exists()) {
           const rawData = snapshot.val();
-          const arr = Object.keys(rawData).map(key => ({ id: key, ...rawData[key] }));
+          const arr = [];
+          Object.keys(rawData).forEach(date => {
+            const dateData = rawData[date];
+            if (dateData[userData.uid]) {
+              arr.push({ id: date, ...dateData[userData.uid] });
+            }
+          });
           setData(arr);
         } else {
           setData([]);
