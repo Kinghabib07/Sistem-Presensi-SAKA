@@ -53,15 +53,22 @@ export default function DashboardLayout({ user }) {
     <div style={{ display: 'flex', minHeight: '100vh', width: '100vw', overflowX: 'hidden' }}>
       
       {/* Mobile Header (Topbar khusus HP) */}
-      <div className="mobile-header">
-        <h2 style={{ 
-            fontFamily: 'Outfit', 
-            fontSize: '1.25rem',
-            background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            margin: 0
-        }}>Portal Kesiswaan</h2>
+      <div className="mobile-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <img 
+            src="/logo_saka.png" 
+            alt="Logo SMAN 1 Karangmojo" 
+            style={{ width: '32px', height: '32px', objectFit: 'contain' }} 
+          />
+          <h2 style={{ 
+              fontFamily: 'Outfit', 
+              fontSize: '1.25rem',
+              background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              margin: 0
+          }}>SIPRES SAKA</h2>
+        </div>
         <button className="btn-icon" onClick={() => setIsSidebarOpen(true)}>
           <Menu size={24} />
         </button>
@@ -91,7 +98,7 @@ export default function DashboardLayout({ user }) {
               background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent'
-            }}>Portal Kesiswaan</h2>
+            }}>SIPRES SAKA</h2>
             <p className="text-muted" style={{ fontSize: '0.85rem' }}>Dashboard Admin</p>
           </div>
           {/* Tombol Silang (X) hanya muncul di HP saat sidebar terbuka */}

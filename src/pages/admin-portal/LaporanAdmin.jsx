@@ -275,8 +275,8 @@ export default function LaporanPresensi() {
   const getBadgeStatus = (status) => {
     switch (status) {
       case 'Hadir': return <span className="badge" style={{ background: '#10b981', color: '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>Hadir</span>;
-      case 'Terlambat': return <span className="badge" style={{ background: '#f59e0b', color: '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>Terlambat</span>;
-      case 'Tanpa Keterangan': return <span className="badge" style={{ background: '#ef4444', color: '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>Tanpa Keterangan</span>;
+      case 'Terlambat': return <span className="badge" style={{ background: '#ef4444', color: '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>Terlambat</span>;
+      case 'Tanpa Keterangan': return <span className="badge" style={{ background: '#f59e0b', color: '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>Tanpa Keterangan</span>;
       default: return <span className="badge" style={{ background: '#9ca3af', color: '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>{status}</span>;
     }
   };
@@ -494,8 +494,8 @@ export default function LaporanPresensi() {
                     ) : (
                       <>
                         <td style={{ textAlign: 'center', color: '#10b981', fontWeight: 600 }}>{item.hadir}</td>
-                        <td style={{ textAlign: 'center', color: '#f59e0b', fontWeight: 600 }}>{item.terlambat}</td>
-                        <td style={{ textAlign: 'center', color: '#ef4444', fontWeight: 600 }}>{item.tanpaKeterangan}</td>
+                        <td style={{ textAlign: 'center', color: '#ef4444', fontWeight: 600 }}>{item.terlambat}</td>
+                        <td style={{ textAlign: 'center', color: '#f59e0b', fontWeight: 600 }}>{item.tanpaKeterangan}</td>
                       </>
                     )}
                   </tr>

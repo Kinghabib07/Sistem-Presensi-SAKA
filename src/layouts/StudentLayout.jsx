@@ -56,7 +56,7 @@ export default function StudentLayout({ user }) {
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             margin: 0
-        }}>Portal Siswa</h2>
+        }}>SIPRES SAKA</h2>
         <button className="btn-icon" onClick={() => setIsSidebarOpen(true)}>
           <Menu size={24} />
         </button>
@@ -85,7 +85,7 @@ export default function StudentLayout({ user }) {
               background: 'linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent'
-            }}>Portal Siswa</h2>
+            }}>SIPRES SAKA</h2>
             <p className="text-muted" style={{ fontSize: '0.85rem' }}>Area Siswa</p>
           </div>
           <button 

@@ -17,9 +17,8 @@ export default function Login() {
     setError('');
 
     try {
-      // Trik Firebase: Firebase mewajibkan format email, jadi kita akali
-      // dengan menambahkan domain palsu di belakang NIS secara otomatis.
-      // Jadi siswa cukup mengetikkan NIS (misal: 12345), tapi sistem mengirimnya sebagai 12345@sekolah.id
+      // Firebase menggunakan format email.
+      // Jika pengguna memasukkan NIS, otomatis ditambahkan domain sekolah.
       let loginEmail = nis;
       if (!nis.includes('@')) {
         loginEmail = `${nis}@sekolah.id`;
@@ -75,8 +74,10 @@ export default function Login() {
       
       <div className="auth-card">
         <div className="auth-header">
-          <h1 className="auth-title">Portal Kesiswaan</h1>
-          <p className="text-muted">Sistem Presensi Terpadu</p>
+          <img src="/logo_saka.png" alt="Logo SIPRES SAKA" className="login-logo" />
+          <h1 className="auth-title">SIPRES SAKA</h1>
+          <p className="text-muted">Sistem Presensi Siswa </p>
+          <p className="text-muted">SMA Negeri 1 Karangmojo</p>
         </div>
         
         {error && <div className="badge badge-danger" style={{ display: 'block', marginBottom: '1rem', padding: '1rem', whiteSpace: 'normal', fontSize: '0.9rem' }}>{error}</div>}
@@ -137,7 +138,7 @@ export default function Login() {
               justifyContent: 'center',
               alignItems: 'center',
               gap: '5px',
-              marginTop: '12px',
+              marginTop: '5px',
               fontSize: '0.7rem',
               color: '#6c757d',
               fontWeight: '500'
