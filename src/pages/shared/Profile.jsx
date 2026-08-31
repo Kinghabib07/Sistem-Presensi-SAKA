@@ -7,21 +7,33 @@ import { User, Mail, Shield, BookOpen, Lock, Key } from 'lucide-react';
 export default function Profile() {
   const { userData } = useOutletContext();
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState({ text: '', type: '' });
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (newPassword.length < 6) {
-      setMsg({ text: "Password minimal 6 karakter.", type: 'danger' });
+    
+    // Regex: min 8 chars, at least 1 uppercase, 1 lowercase, 1 number, 1 symbol
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+    
+    if (!passwordRegex.test(newPassword)) {
+      setMsg({ text: "Kata sandi harus minimal 8 karakter dan mengandung kombinasi huruf besar, huruf kecil, angka, serta simbol.", type: 'danger' });
       return;
     }
+    
+    if (newPassword !== confirmPassword) {
+      setMsg({ text: "Konfirmasi kata sandi tidak cocok.", type: 'danger' });
+      return;
+    }
+
     setLoading(true);
     try {
       if (auth.currentUser) {
         await updatePassword(auth.currentUser, newPassword);
         setMsg({ text: "Kata sandi berhasil diperbarui dengan aman!", type: 'success' });
         setNewPassword('');
+        setConfirmPassword('');
       }
     } catch (error) {
       console.error(error);
@@ -102,17 +114,17 @@ export default function Profile() {
           <Key size={20} className="text-muted" /> Ubah Kata Sandi
         </h3>
         <p className="text-muted mb-6" style={{ fontSize: '0.9rem' }}>
-          Jaga keamanan akun Anda dengan mengganti kata sandi secara berkala.
+          Kata sandi harus minimal 8 karakter (terdiri dari huruf besar, kecil, angka, dan simbol).
         </p>
 
         {msg.text && (
-          <div className={`badge badge-${msg.type}`} style={{ display: 'block', marginBottom: '1.5rem', padding: '1rem', whiteSpace: 'normal', fontSize: '0.9rem', borderRadius: '8px' }}>
+          <div className={`badge badge-${msg.type}`} style={{ display: 'block', marginBottom: '1.5rem', padding: '1rem', whiteSpace: 'normal', fontSize: '0.9rem', borderRadius: '8px', lineHeight: '1.4' }}>
             {msg.text}
           </div>
         )}
 
         <form onSubmit={handleChangePassword}>
-          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+          <div className="form-group" style={{ marginBottom: '1.25rem' }}>
             <label className="form-label" style={{ fontWeight: 600, fontSize: '0.9rem', color: '#374151' }}>Kata Sandi Baru</label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <Lock size={18} style={{ position: 'absolute', left: '1rem', color: '#9ca3af' }} />
@@ -122,7 +134,23 @@ export default function Profile() {
                 value={newPassword} 
                 onChange={(e) => setNewPassword(e.target.value)} 
                 required 
-                placeholder="Masukkan minimal 6 karakter..." 
+                placeholder="Kata sandi baru..." 
+                disabled={loading}
+                style={{ paddingLeft: '2.75rem', height: '3.2rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
+              />
+            </div>
+          </div>
+          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+            <label className="form-label" style={{ fontWeight: 600, fontSize: '0.9rem', color: '#374151' }}>Konfirmasi Kata Sandi Baru</label>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <Lock size={18} style={{ position: 'absolute', left: '1rem', color: '#9ca3af' }} />
+              <input 
+                type="password" 
+                className="form-control" 
+                value={confirmPassword} 
+                onChange={(e) => setConfirmPassword(e.target.value)} 
+                required 
+                placeholder="Ketik ulang kata sandi baru..." 
                 disabled={loading}
                 style={{ paddingLeft: '2.75rem', height: '3.2rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
               />

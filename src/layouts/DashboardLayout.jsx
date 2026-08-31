@@ -34,8 +34,11 @@ export default function DashboardLayout({ user }) {
   }, [location.pathname]);
 
   const handleLogout = async () => {
-    await signOut(auth);
-    navigate('/');
+    const confirm = window.confirm("Apakah Anda yakin ingin keluar dari sistem?");
+    if (confirm) {
+      await signOut(auth);
+      navigate('/');
+    }
   };
 
   const navItems = [
