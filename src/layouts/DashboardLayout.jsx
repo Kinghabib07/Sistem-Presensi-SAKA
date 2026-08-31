@@ -53,7 +53,7 @@ export default function DashboardLayout({ user }) {
     <div style={{ display: 'flex', minHeight: '100vh', width: '100vw', overflowX: 'hidden' }}>
       
       {/* Mobile Header (Topbar khusus HP) */}
-      <div className="mobile-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="mobile-header" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <img 
             src="/logo_saka.png" 
@@ -83,6 +83,7 @@ export default function DashboardLayout({ user }) {
       {/* Sidebar Navigation */}
       <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`} style={{ 
         width: '280px', 
+        flexShrink: 0,
         background: 'var(--surface-glass)', 
         backdropFilter: 'blur(16px)',
         borderRight: '1px solid var(--border)',
@@ -91,15 +92,24 @@ export default function DashboardLayout({ user }) {
         flexDirection: 'column'
       }}>
         <div style={{ marginBottom: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h2 style={{ 
-              fontFamily: 'Outfit', 
-              fontSize: '1.5rem',
-              background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}>SIPRES SAKA</h2>
-            <p className="text-muted" style={{ fontSize: '0.85rem' }}>Dashboard Admin</p>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <img 
+              src="/logo_saka.png" 
+              alt="Logo" 
+              style={{ width: '54px', height: '54px', objectFit: 'contain' }} 
+            />
+            <div>
+              <h2 style={{ 
+                fontFamily: 'Outfit', 
+                fontSize: '1.45rem',
+                background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                lineHeight: 1,
+                whiteSpace: 'nowrap'
+              }}>SIPRES SAKA</h2>
+              <p className="text-muted" style={{ fontSize: '0.85rem', marginTop: '0.25rem', whiteSpace: 'nowrap' }}>Dashboard Admin</p>
+            </div>
           </div>
           {/* Tombol Silang (X) hanya muncul di HP saat sidebar terbuka */}
           <button 

@@ -181,7 +181,7 @@ export default function DashboardAdmin() {
       </div>
 
       {/* CHARTS SECTION */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
+      <div className="charts-grid" style={{ display: 'grid', gap: '2rem', marginBottom: '2rem' }}>
         
         {/* PIE CHART */}
         <div className="chart-card hover-scale">
@@ -219,7 +219,7 @@ export default function DashboardAdmin() {
         </div>
 
         {/* BAR CHART */}
-        <div className="chart-card hover-scale" style={{ gridColumn: 'span 2' }}>
+        <div className="chart-card hover-scale bar-chart-card">
           <h3 className="mb-4" style={{ fontSize: '1.1rem', color: '#374151' }}>Tren Presensi 7 Hari Terakhir</h3>
           <div style={{ width: '100%', height: 300 }}>
             <ResponsiveContainer>

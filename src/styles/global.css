@@ -259,7 +259,13 @@ h1, h2, h3, h4, h5, h6 {
   .page-title { font-size: 1.8rem; }
   .card, .auth-card { padding: 1.5rem; }
   .stats-grid { grid-template-columns: 1fr; }
+  .charts-grid { grid-template-columns: 1fr !important; }
+  .bar-chart-card { grid-column: span 1 !important; }
   form { grid-template-columns: 1fr !important; }
+}
+
+@media (min-width: 769px) {
+  .charts-grid { grid-template-columns: 1fr 2fr; }
 }
 
 /* Mobile Header (hanya muncul di HP) */
