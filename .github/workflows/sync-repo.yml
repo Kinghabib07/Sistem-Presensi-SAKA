@@ -1,0 +1,22 @@
+name: Sync Repo to Deployment Target
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to Target Repository
+        env:
+          TARGET_PAT: ${{ secrets.TARGET_REPO_PAT }}
+        run: |
+          git remote add target https://x-access-token:${TARGET_PAT}@github.com/flownix-dev/Sistem-Presensi-SAKA.git
+          git push target HEAD:refs/heads/main --force
