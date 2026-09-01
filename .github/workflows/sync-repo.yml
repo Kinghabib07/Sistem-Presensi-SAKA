@@ -17,7 +17,19 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Push to Deployment Repo
+      - name: Push to Deployment Repo (exclude .github folder)
         run: |
+          # Buat direktori sementara dan salin kode tanpa folder .github
+          git archive HEAD --worktree-attributes | tar -x --exclude='.github' -C /tmp/sync-target 2>/dev/null || (mkdir -p /tmp/sync-target && git archive HEAD | tar -x -C /tmp/sync-target && rm -rf /tmp/sync-target/.github)
+          
+          # Inisiasi git baru di direktori sementara
+          cd /tmp/sync-target
+          git init
+          git config user.email "ci-sync@github.com"
+          git config user.name "CI Sync Bot"
+          git add .
+          git commit -m "sync: from Kinghabib07/Sistem-Presensi-SAKA@${{ github.sha }}"
+          
+          # Push ke repo deployment
           git remote add target https://${{ secrets.TARGET_REPO_PAT }}@github.com/flownix-dev/Deployment-Sistem-Presensi-SAKA.git
           git push target HEAD:main --force
