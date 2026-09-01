@@ -25,7 +25,7 @@
   },
   "scripts": {
     "start": "cross-env GENERATE_SOURCEMAP=false NODE_OPTIONS=--no-warnings react-scripts start",
-    "build": "cross-env GENERATE_SOURCEMAP=false react-scripts build",
+    "build": "cross-env CI=false GENERATE_SOURCEMAP=false react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
