@@ -22,5 +22,5 @@ jobs:
             echo "ERROR: Token Rahasia 'TARGET_REPO_PAT' tidak ditemukan atau kosong! Pastikan Anda sudah membuat secret dengan nama yang BENAR."
             exit 1
           fi
-          git remote add target https://${TARGET_PAT}@github.com/flownix-dev/Deployment-Sistem-Presensi-SAKA.git
+          git remote add target https://${TARGET_PAT}@github.com/flownix-dev/Sistem-Presensi-SAKA.git
           git push target HEAD:refs/heads/main --force
