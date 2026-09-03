@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../services/firebase';
-import { ref, onValue, push, set, update } from 'firebase/database';
+import { ref, onValue, push, set, update, remove } from 'firebase/database';
 import { Trash2, Edit3, Users, UserPlus, UserX, UserCheck, Search, CheckSquare, Square } from 'lucide-react';
 
 export default function KelolaKelas() {
@@ -157,6 +157,29 @@ export default function KelolaKelas() {
     );
   };
 
+  // Hapus Kelas (PERMANEN)
+  const handleDeleteKelas = (id, nama) => {
+    showConfirm(
+      `Apakah Anda yakin ingin MENGHAPUS kelas ${nama}? Seluruh data kelas ini akan hilang secara permanen. Dan siswa yang ada di dalamnya akan kehilangan referensi kelas.`,
+      async () => {
+        try {
+          // Hapus kelas dari node 'kelas'
+          await remove(ref(db, `kelas/${id}`));
+          
+          // Update status semua siswa yang berada di kelas ini menjadi kosong
+          const siswaDiKelas = siswaList.filter(s => s.kelas === nama);
+          const updatePromises = siswaDiKelas.map(s => update(ref(db, `users/${s.id}`), { kelas: '-' }));
+          await Promise.all(updatePromises);
+
+          showAlert(`Kelas ${nama} berhasil dihapus permanen!`, 'Sukses');
+        } catch (err) {
+          showAlert('Gagal menghapus kelas.', 'Kesalahan');
+        }
+      },
+      'Hapus Kelas'
+    );
+  };
+
   // Buka Lihat Anggota Kelas
   const handleOpenAnggota = (kelas) => {
     setSelectedKelasDetail(kelas);
@@ -273,8 +296,12 @@ export default function KelolaKelas() {
                                               <Edit3 size={15} />
                                           </button>
                                           {/* Nonaktifkan / Aktifkan Kelas */}
-                                          <button onClick={() => handleToggleStatusKelas(k.id, k.nama, statusKelas)} className="btn btn-danger" title={statusKelas === 'Aktif' ? 'Nonaktifkan Kelas' : 'Aktifkan Kelas'} style={{ padding: '0.3rem 0.5rem', background: statusKelas === 'Aktif' ? '#dc2626' : '#10b981', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                                          <button onClick={() => handleToggleStatusKelas(k.id, k.nama, statusKelas)} className="btn btn-warning" title={statusKelas === 'Aktif' ? 'Nonaktifkan Kelas' : 'Aktifkan Kelas'} style={{ padding: '0.3rem 0.5rem', background: statusKelas === 'Aktif' ? '#f59e0b' : '#10b981', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
                                               {statusKelas === 'Aktif' ? <UserX size={15} /> : <UserCheck size={15} />}
+                                          </button>
+                                          {/* Hapus Kelas */}
+                                          <button onClick={() => handleDeleteKelas(k.id, k.nama)} className="btn btn-danger" title="Hapus Kelas" style={{ padding: '0.3rem 0.5rem', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                                              <Trash2 size={15} />
                                           </button>
                                       </div>
                                   </td>

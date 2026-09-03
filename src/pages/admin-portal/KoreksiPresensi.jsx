@@ -109,8 +109,20 @@ export default function KoreksiPresensi() {
   const handleOpenKoreksi = (siswa) => {
     setActiveSiswa(siswa);
     setFormStatus(siswa.status === 'Tanpa Keterangan' ? 'Hadir' : siswa.status);
-    setFormWaktu(siswa.waktu !== '-' ? siswa.waktu : '07:00');
-    setFormKeterangan(siswa.keterangan !== '-' ? siswa.keterangan : '');
+    
+    let initialWaktu = '07:00';
+    if (siswa.waktu && siswa.waktu !== '-') {
+      if (siswa.waktu.includes('T')) {
+        const d = new Date(siswa.waktu);
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        initialWaktu = `${hh}:${mm}`;
+      } else {
+        initialWaktu = siswa.waktu;
+      }
+    }
+    setFormWaktu(initialWaktu);
+    setFormKeterangan(siswa.keterangan && siswa.keterangan !== '-' ? siswa.keterangan : '');
     setModalKoreksiOpen(true);
   };
 
@@ -167,10 +179,10 @@ export default function KoreksiPresensi() {
       const dbRef = ref(db, `presensi/${selectedDate}/${activeSiswa.uid}`);
       
       await update(dbRef, {
-        status: formStatus,
-        waktu: formStatus === 'Tanpa Keterangan' ? '-' : formWaktu,
-        keterangan: formKeterangan,
-        auditTrail: auditString
+        status: formStatus || 'Hadir',
+        waktu: formStatus === 'Tanpa Keterangan' ? '-' : (formWaktu || '07:00'),
+        keterangan: formKeterangan || '-',
+        auditTrail: auditString || '-'
       });
 
       import('react-hot-toast').then(({ toast }) => {
