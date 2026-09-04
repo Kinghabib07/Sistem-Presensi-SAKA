@@ -71,7 +71,7 @@ export default function RiwayatSiswa() {
                       )}
                     </td>
                     <td>
-                      <span className={`badge badge-${item.status === 'Hadir' ? 'success' : item.status === 'Terlambat' ? 'warning' : 'danger'}`}>
+                      <span className={`badge badge-${item.status === 'Hadir' ? 'success' : item.status === 'Terlambat' ? 'danger' : 'warning'}`}>
                         {item.status}
                       </span>
                     </td>
