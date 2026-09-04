@@ -108,7 +108,7 @@ export default function Izin() {
               ) : (
                 data.map((item) => (
                   <tr key={item.id}>
-                    <td style={{ fontSize: '0.9rem' }}>{new Date(item.waktu).toLocaleString('id-ID')}</td>
+                    <td style={{ fontSize: '0.9rem' }}>{new Date(item.waktu).toLocaleString('id-ID', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\./g, ':')}</td>
                     <td><strong>{item.nama}</strong></td>
                     <td>{item.kelas}</td>
                     <td><span className="badge badge-success">{item.alasan}</span></td>

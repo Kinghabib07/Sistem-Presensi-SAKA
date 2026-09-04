@@ -265,7 +265,7 @@ export default function KelolaPresensi() {
                     <td>{item.nama_lengkap}</td>
                     <td><span className="badge badge-info">{item.kelas}</span></td>
                     <td>{getBadgeStatus(item.status)}</td>
-                    <td>{item.waktu}</td>
+                    <td>{item.waktu === '-' ? '-' : item.waktu.includes('T') ? new Date(item.waktu).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':') : item.waktu}</td>
                     <td style={{ textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', alignItems: 'center' }}>
                         
@@ -345,7 +345,7 @@ export default function KelolaPresensi() {
               <div><strong>Kelas:</strong> {selectedDetail.kelas}</div>
               <div><strong>Tanggal:</strong> {selectedDate}</div>
               <div><strong>Status:</strong> {getBadgeStatus(selectedDetail.status)}</div>
-              <div><strong>Waktu Absen:</strong> {selectedDetail.waktu}</div>
+              <div><strong>Waktu Absen:</strong> {selectedDetail.waktu === '-' ? '-' : selectedDetail.waktu.includes('T') ? new Date(selectedDetail.waktu).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':') : selectedDetail.waktu}</div>
               <div><strong>Keterangan / Catatan:</strong> {selectedDetail.keterangan !== '-' ? selectedDetail.keterangan : 'Tidak ada keterangan'}</div>
               
               {selectedDetail.foto && (

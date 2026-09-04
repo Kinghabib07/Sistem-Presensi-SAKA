@@ -283,7 +283,9 @@ export default function DashboardAdmin() {
                     <td>{item.nama_lengkap}</td>
                     <td><span className="badge badge-info">{item.kelas}</span></td>
                     <td>{getBadgeStatus(item.status)}</td>
-                    <td style={{ fontWeight: 600, color: '#4b5563' }}>{item.waktu}</td>
+                    <td style={{ fontWeight: 600, color: '#4b5563' }}>
+                      {item.waktu === '-' ? '-' : item.waktu.includes('T') ? new Date(item.waktu).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':') : item.waktu}
+                    </td>
                   </tr>
                 ))
               )}

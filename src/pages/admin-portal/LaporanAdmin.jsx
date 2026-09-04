@@ -201,7 +201,7 @@ export default function LaporanPresensi() {
           Kelas: row.kelas,
           Tanggal: row.periode,
           Status: row.status,
-          'Waktu Masuk': row.waktu,
+          'Waktu Masuk': row.waktu === '-' ? '-' : row.waktu.includes('T') ? new Date(row.waktu).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':') : row.waktu,
           Keterangan: row.keterangan,
         }));
       }
@@ -488,7 +488,7 @@ export default function LaporanPresensi() {
                     {modeRekap === 'harian' ? (
                       <>
                         <td>{getBadgeStatus(item.status)}</td>
-                        <td>{item.waktu}</td>
+                        <td>{item.waktu === '-' ? '-' : item.waktu.includes('T') ? new Date(item.waktu).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':') : item.waktu}</td>
                         <td>{item.keterangan}</td>
                       </>
                     ) : (

@@ -297,7 +297,7 @@ export default function KoreksiPresensi() {
                     <td>{getBadgeStatus(item.status)}</td>
                     <td>
                       <div style={{ fontSize: '0.85rem' }}>
-                        <div><strong>Waktu:</strong> {item.waktu}</div>
+                        <div><strong>Waktu:</strong> {item.waktu === '-' ? '-' : item.waktu.includes('T') ? new Date(item.waktu).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':') : item.waktu}</div>
                         <div className="text-muted"><strong>Ket:</strong> {item.keterangan}</div>
                       </div>
                     </td>

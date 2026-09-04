@@ -119,7 +119,7 @@ export default function RekapSiswa() {
                       ) : item.waktu === '-' ? (
                         '-'
                       ) : item.waktu.includes('T') ? (
-                        `${new Date(item.waktu).toLocaleTimeString('id-ID')} WIB`
+                        `${new Date(item.waktu).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':')} WIB`
                       ) : (
                         `${item.waktu} WIB`
                       )}
