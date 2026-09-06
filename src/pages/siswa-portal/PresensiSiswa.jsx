@@ -151,64 +151,81 @@ export default function PresensiSiswa() {
       <h1 className="page-title mb-6">Scan QR Kehadiran</h1>
       <p className="text-muted mb-8">Arahkan kamera HP kamu ke QR Code yang ditampilkan oleh Admin.</p>
 
-      <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
         {/* Kolom Kamera */}
-        <div style={{ flex: '1 1 400px', maxWidth: '600px', margin: '0 auto' }}>
-          <div className="card" style={{ height: '100%', padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '100%', maxWidth: '500px' }}>
+          <div className="card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div id="qr-reader-siswa" style={{ width: '100%', border: 'none' }}></div>
             
             <div style={{ marginTop: '1.5rem' }}>
               {!isScanning ? (
                 <button 
                   onClick={startScanning}
-                  style={{ background: '#4f46e5', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  style={{ background: '#4f46e5', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1rem' }}
                 >
-                  <Camera size={18} /> Buka Kamera & Scan
+                  <Camera size={20} /> Buka Kamera & Scan
                 </button>
               ) : (
                 <button 
                   onClick={stopScanning}
-                  style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1rem' }}
                 >
-                  <StopCircle size={18} /> Tutup Kamera
+                  <StopCircle size={20} /> Tutup Kamera
                 </button>
               )}
             </div>
-          </div>
-        </div>
-
-        {/* Kolom Hasil */}
-        <div style={{ flex: '1 1 300px' }}>
-          <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '3rem 2rem' }}>
             
-            {!status.type ? (
-               <div style={{ color: 'var(--text-muted)' }}>
-                 <h2>Halo, {userData.nama_lengkap}</h2>
-                 <p style={{ marginTop: '0.5rem' }}>Tekan tombol <strong>Buka Kamera & Scan</strong> lalu arahkan ke QR Admin untuk melakukan presensi.</p>
-               </div>
-            ) : status.type === 'success' ? (
-               <div style={{ color: 'var(--success)' }}>
-                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}><CheckCircle size={64} /></div>
-                 <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{status.msg}</h1>
-                 <p style={{ color: 'var(--text)', fontSize: '1.1rem' }}>{status.detail}</p>
-               </div>
-            ) : status.type === 'warning' ? (
-               <div style={{ color: 'var(--warning)' }}>
-                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}><AlertTriangle size={64} /></div>
-                 <h1 style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>{status.msg}</h1>
-                 <p style={{ color: 'var(--text)', fontSize: '1rem' }}>{status.detail}</p>
-               </div>
-            ) : (
-               <div style={{ color: 'var(--danger)' }}>
-                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}><XCircle size={64} /></div>
-                 <h1 style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>{status.msg}</h1>
-                 <p style={{ color: 'var(--text)', fontSize: '1rem', fontWeight: 600 }}>{status.detail}</p>
-               </div>
+            {!isScanning && (
+              <div style={{ marginTop: '1.5rem', textAlign: 'center', color: '#6b7280', fontSize: '0.95rem' }}>
+                <p>Halo, <strong>{userData.nama_lengkap}</strong></p>
+                <p>Tekan tombol di atas untuk memulai presensi.</p>
+              </div>
             )}
-            
           </div>
         </div>
       </div>
+
+      {/* MODAL POP-UP HASIL SCAN */}
+      {status.type && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          backgroundColor: 'rgba(0, 0, 0, 0.65)', display: 'flex', justifyContent: 'center',
+          alignItems: 'center', zIndex: 9999, padding: '1rem',
+          animation: 'fadeIn 0.25s ease-out'
+        }}>
+          <div className="card" style={{ width: '100%', maxWidth: '380px', background: '#fff', textAlign: 'center', padding: '2.5rem 1.5rem', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
+            
+            {status.type === 'success' ? (
+               <div style={{ color: '#10b981' }}>
+                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}><CheckCircle size={72} /></div>
+                 <h1 style={{ fontSize: '2rem', marginBottom: '0.75rem', fontWeight: 800 }}>{status.msg}</h1>
+                 <p style={{ color: '#4b5563', fontSize: '1.05rem', lineHeight: 1.5 }}>{status.detail}</p>
+               </div>
+            ) : status.type === 'warning' ? (
+               <div style={{ color: '#f59e0b' }}>
+                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}><AlertTriangle size={72} /></div>
+                 <h1 style={{ fontSize: '1.8rem', marginBottom: '0.75rem', fontWeight: 800 }}>{status.msg}</h1>
+                 <p style={{ color: '#4b5563', fontSize: '1.05rem', lineHeight: 1.5 }}>{status.detail}</p>
+               </div>
+            ) : (
+               <div style={{ color: '#ef4444' }}>
+                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}><XCircle size={72} /></div>
+                 <h1 style={{ fontSize: '1.8rem', marginBottom: '0.75rem', fontWeight: 800 }}>{status.msg}</h1>
+                 <p style={{ color: '#4b5563', fontSize: '1.05rem', fontWeight: 500, lineHeight: 1.5 }}>{status.detail}</p>
+               </div>
+            )}
+            
+            <button 
+              onClick={() => setStatus({ type: '', msg: '', detail: null })} 
+              style={{ marginTop: '2rem', background: '#f3f4f6', color: '#374151', border: 'none', padding: '0.75rem 2.5rem', borderRadius: '8px', fontWeight: '600', fontSize: '1rem', cursor: 'pointer', transition: 'background 0.2s' }}
+              onMouseOver={(e) => e.currentTarget.style.background = '#e5e7eb'}
+              onMouseOut={(e) => e.currentTarget.style.background = '#f3f4f6'}
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
