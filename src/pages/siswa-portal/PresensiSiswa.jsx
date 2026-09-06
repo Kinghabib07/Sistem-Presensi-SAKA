@@ -77,7 +77,7 @@ export default function PresensiSiswa() {
                    uid: userData.uid
                  });
 
-                 setStatus({ type: 'success', msg: kehadiranStatus.toUpperCase(), detail: `Berhasil mencatat presensi untuk ${userData.nama_lengkap}` });
+                 setStatus({ type: 'success', msg: 'BERHASIL', detail: `Berhasil mencatat presensi untuk ${userData.nama_lengkap}` });
               }
             }
           } catch (err) {
