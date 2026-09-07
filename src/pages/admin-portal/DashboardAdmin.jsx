@@ -45,7 +45,6 @@ export default function DashboardAdmin() {
           if (absensiSiswa) {
             if (absensiSiswa.status === 'Hadir') hadir++;
             else if (absensiSiswa.status === 'Terlambat') terlambat++;
-            else if (absensiSiswa.status === 'Tanpa Keterangan') tanpaKeterangan++;
 
             loggedList.push({
               uid: uid,
@@ -58,7 +57,8 @@ export default function DashboardAdmin() {
           }
         });
 
-        setPresensiHariIni({ hadir, terlambat, tanpaKeterangan });
+        const calcTanpaKeterangan = Math.max(0, count - hadir - terlambat);
+        setPresensiHariIni({ hadir, terlambat, tanpaKeterangan: calcTanpaKeterangan });
         setPresensiList(loggedList.sort((a, b) => b.waktu.localeCompare(a.waktu)));
 
         const weekArr = [];
@@ -69,12 +69,12 @@ export default function DashboardAdmin() {
           const nameDate = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
           
           const dataDay = presensiData[k] || {};
-          let h = 0, t = 0, a = 0;
+          let h = 0, t = 0;
           Object.values(dataDay).forEach(val => {
             if (val.status === 'Hadir') h++;
             if (val.status === 'Terlambat') t++;
-            if (val.status === 'Tanpa Keterangan') a++;
           });
+          const a = Math.max(0, count - h - t);
           weekArr.push({ name: nameDate, Hadir: h, Terlambat: t, 'Tanpa Keterangan': a });
         }
         setWeeklyData(weekArr);
