@@ -104,7 +104,11 @@ export default function DashboardAdmin() {
     return () => unsubUsers();
   }, []);
 
-  const COLORS = ['#10b981', '#ef4444', '#f59e0b'];
+  const COLORS = {
+    'Hadir': '#10b981',
+    'Terlambat': '#ef4444',
+    'Tanpa Keterangan': '#f59e0b'
+  };
   const totalPresensi = presensiHariIni.hadir + presensiHariIni.terlambat + presensiHariIni.tanpaKeterangan;
   const pieData = totalPresensi === 0 
     ? [{ name: 'Belum Ada Data', value: 1, fill: '#e5e7eb' }]
@@ -213,7 +217,7 @@ export default function DashboardAdmin() {
                   {totalPresensi === 0 
                     ? <Cell fill="#e5e7eb" />
                     : pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell key={`cell-${index}`} fill={COLORS[entry.name] || '#9ca3af'} />
                     ))
                   }
                 </Pie>
