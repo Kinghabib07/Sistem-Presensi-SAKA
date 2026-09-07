@@ -52,7 +52,8 @@ export default function PresensiSiswa() {
             if (diff > 30000 || diff < -5000) {
               setStatus({ type: 'danger', msg: 'QR CODE KEDALUWARSA!', detail: 'QR Code Admin sudah kadaluarsa. Minta admin memperbarui.' });
             } else {
-              const today = new Date().toISOString().split('T')[0];
+              const dDate = new Date();
+              const today = dDate.getFullYear() + '-' + String(dDate.getMonth() + 1).padStart(2, '0') + '-' + String(dDate.getDate()).padStart(2, '0');
               const presensiRef = ref(db, `presensi/${today}/${userData.uid}`);
               const snapshot = await get(presensiRef);
               

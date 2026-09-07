@@ -11,7 +11,8 @@ export default function LaporanPresensi() {
   const [loading, setLoading] = useState(true);
 
   // Filter & Mode States
-  const todayStr = new Date().toISOString().split('T')[0];
+  const dDate = new Date();
+  const todayStr = dDate.getFullYear() + '-' + String(dDate.getMonth() + 1).padStart(2, '0') + '-' + String(dDate.getDate()).padStart(2, '0');
   const [modeRekap, setModeRekap] = useState('harian'); // 'harian' | 'mingguan' | 'bulanan'
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const [selectedMonth, setSelectedMonth] = useState(todayStr.slice(0, 7)); // YYYY-MM

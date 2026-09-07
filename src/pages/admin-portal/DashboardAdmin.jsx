@@ -14,7 +14,8 @@ export default function DashboardAdmin() {
   const [loading, setLoading] = useState(true);
 
   // Format tanggal hari ini (YYYY-MM-DD)
-  const todayStr = new Date().toISOString().split('T')[0];
+  const dDate = new Date();
+  const todayStr = dDate.getFullYear() + '-' + String(dDate.getMonth() + 1).padStart(2, '0') + '-' + String(dDate.getDate()).padStart(2, '0');
 
   useEffect(() => {
     // 1. Ambil Data Users dan Presensi Secara Bersamaan

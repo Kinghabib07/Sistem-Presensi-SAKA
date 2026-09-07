@@ -12,7 +12,8 @@ export default function DashboardSiswa() {
   useEffect(() => {
     async function checkTodayAttendance() {
       if (!userData) return;
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const dDate = new Date();
+      const today = dDate.getFullYear() + '-' + String(dDate.getMonth() + 1).padStart(2, '0') + '-' + String(dDate.getDate()).padStart(2, '0'); // YYYY-MM-DD
       
       try {
         const presensiRef = ref(db, `presensi/${today}/${userData.uid}`);

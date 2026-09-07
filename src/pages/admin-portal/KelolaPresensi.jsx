@@ -9,7 +9,8 @@ export default function KelolaPresensi() {
   const [loading, setLoading] = useState(true);
 
   // Filter States
-  const todayStr = new Date().toISOString().split('T')[0];
+  const dDate = new Date();
+  const todayStr = dDate.getFullYear() + '-' + String(dDate.getMonth() + 1).padStart(2, '0') + '-' + String(dDate.getDate()).padStart(2, '0');
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const [selectedKelas, setSelectedKelas] = useState('Semua');
   const [selectedStatus, setSelectedStatus] = useState('Semua');
