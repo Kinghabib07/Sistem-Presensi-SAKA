@@ -69,12 +69,23 @@ export default function DashboardAdmin() {
           const nameDate = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
           
           const dataDay = presensiData[k] || {};
-          let h = 0, t = 0;
+          let h = 0, t = 0, a = 0;
+          const hasData = Object.keys(dataDay).length > 0;
+
           Object.values(dataDay).forEach(val => {
             if (val.status === 'Hadir') h++;
-            if (val.status === 'Terlambat') t++;
+            else if (val.status === 'Terlambat') t++;
+            else if (val.status === 'Tanpa Keterangan') a++;
           });
-          const a = Math.max(0, count - h - t);
+          
+          // Jika hari ini (atau hari tersebut ada presensi masuk), hitung sisanya sebagai Tanpa Keterangan.
+          // Jika hari libur (kosong sama sekali), biarkan 0 agar grafik tidak penuh orange.
+          if (k === todayKey || hasData) {
+            a = Math.max(0, count - h - t);
+          } else {
+            a = 0;
+          }
+          
           weekArr.push({ name: nameDate, Hadir: h, Terlambat: t, 'Tanpa Keterangan': a });
         }
         setWeeklyData(weekArr);
