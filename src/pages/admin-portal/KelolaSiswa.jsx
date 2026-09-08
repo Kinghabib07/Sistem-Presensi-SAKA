@@ -279,6 +279,7 @@ export default function KelolaSiswa() {
 
         let sukses = 0;
         let gagal = 0;
+        let gagalList = [];
 
         for (let row of data) {
           const nis = getCleanValue(row, ['NIS', 'nis']);
@@ -301,7 +302,7 @@ export default function KelolaSiswa() {
                     uid = loginCred.user.uid;
                     await signOut(secondaryAuth);
                   } catch (loginError) {
-                    throw { code: 'unrecoverable' }; // Lempar error jika gagal login (password sudah diganti)
+                    throw { code: 'unrecoverable', message: 'NIS sudah terdaftar dengan password berbeda' }; // Lempar error jika gagal login
                   }
                 } else {
                   throw authError;
@@ -319,12 +320,21 @@ export default function KelolaSiswa() {
               sukses++;
             } catch(e) {
               gagal++; 
+              gagalList.push(`${nama} (${nis}) - Error: ${e.code || e.message || 'Gagal menyimpan'}`);
             }
           } else {
             gagal++; // Hitung sebagai gagal jika ada data yang kosong
+            gagalList.push(`Baris Kosong/Tidak Lengkap - NIS: ${nis||'-'}, Nama: ${nama||'-'}, Kelas: ${kelas||'-'}`);
           }
         }
-        showAlert(`IMPORT EXCEL SELESAI!\n\n✅ Berhasil ditambahkan: ${sukses} siswa\n❌ Gagal/Format salah: ${gagal} siswa\n\nPassword default: siswa123`, 'Hasil Import');
+        
+        let pesanHasil = `IMPORT EXCEL SELESAI!\n\n✅ Berhasil: ${sukses} siswa\n❌ Gagal: ${gagal} siswa\n\nPassword default: siswa123`;
+        if (gagal > 0) {
+            console.error("Daftar Siswa Gagal Import:", gagalList);
+            pesanHasil += `\n\nContoh data yang gagal:\n- ${gagalList.slice(0, 4).join('\n- ')}`;
+            if (gagal > 4) pesanHasil += `\n...dan ${gagal - 4} lainnya (Cek Inspect -> Console untuk list lengkap)`;
+        }
+        showAlert(pesanHasil, 'Hasil Import');
       } catch (err) {
         showAlert('Format Excel tidak dikenali! Pastikan memiliki header kolom: NIS, Nama, Kelas.', 'Kesalahan Format');
       }
