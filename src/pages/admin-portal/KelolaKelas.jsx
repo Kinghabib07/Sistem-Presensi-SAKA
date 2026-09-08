@@ -157,26 +157,26 @@ export default function KelolaKelas() {
     );
   };
 
-  // Hapus Kelas (PERMANEN)
+  // Hapus Kelas & Semua Siswanya (PERMANEN)
   const handleDeleteKelas = (id, nama) => {
     showConfirm(
-      `Apakah Anda yakin ingin MENGHAPUS kelas ${nama}? Seluruh data kelas ini akan hilang secara permanen. Dan siswa yang ada di dalamnya akan kehilangan referensi kelas.`,
+      `PERINGATAN KERAS: Apakah Anda yakin ingin MENGHAPUS kelas ${nama}? Seluruh data kelas ini DAN SEMUA SISWA di dalamnya akan ikut TERHAPUS secara permanen!`,
       async () => {
         try {
           // Hapus kelas dari node 'kelas'
           await remove(ref(db, `kelas/${id}`));
           
-          // Update status semua siswa yang berada di kelas ini menjadi kosong
+          // Hapus semua siswa yang berada di kelas ini
           const siswaDiKelas = siswaList.filter(s => s.kelas === nama);
-          const updatePromises = siswaDiKelas.map(s => update(ref(db, `users/${s.id}`), { kelas: '-' }));
-          await Promise.all(updatePromises);
+          const deletePromises = siswaDiKelas.map(s => remove(ref(db, `users/${s.id}`)));
+          await Promise.all(deletePromises);
 
-          showAlert(`Kelas ${nama} berhasil dihapus permanen!`, 'Sukses');
+          showAlert(`Kelas ${nama} beserta ${siswaDiKelas.length} siswanya berhasil dihapus permanen!`, 'Sukses');
         } catch (err) {
-          showAlert('Gagal menghapus kelas.', 'Kesalahan');
+          showAlert('Gagal menghapus kelas dan siswa.', 'Kesalahan');
         }
       },
-      'Hapus Kelas'
+      'Hapus Kelas & Siswa'
     );
   };
 
