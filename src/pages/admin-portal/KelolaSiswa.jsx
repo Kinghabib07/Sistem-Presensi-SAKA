@@ -272,60 +272,65 @@ export default function KelolaSiswa() {
         const kelasUnikExcel = [...new Set(data.map(row => getCleanValue(row, ['Kelas'])).filter(k => k && k !== 'undefined'))];
         const kelasBaru = kelasUnikExcel.filter(k => !kelasList.includes(k));
         
-        for (let namaKelasBaru of kelasBaru) {
+        await Promise.all(kelasBaru.map(namaKelasBaru => {
             const newKelasRef = push(ref(db, 'kelas'));
-            await set(newKelasRef, { nama: namaKelasBaru, status: 'Aktif' });
-        }
+            return set(newKelasRef, { nama: namaKelasBaru, status: 'Aktif' });
+        }));
 
         let sukses = 0;
         let gagal = 0;
         let gagalList = [];
 
-        for (let row of data) {
-          const nis = getCleanValue(row, ['NIS', 'nis']);
-          const nama = getCleanValue(row, ['Nama', 'nama', 'Nama Lengkap']);
-          const kelas = getCleanValue(row, ['Kelas', 'kelas']);
+        // --- 2. Proses Data Siswa (Batching agar cepat dan aman) ---
+        const BATCH_SIZE = 25; // Memproses 25 siswa secara bersamaan
+        for (let i = 0; i < data.length; i += BATCH_SIZE) {
+          const batch = data.slice(i, i + BATCH_SIZE);
+          
+          await Promise.all(batch.map(async (row) => {
+            const nis = getCleanValue(row, ['NIS', 'nis']);
+            const nama = getCleanValue(row, ['Nama', 'nama', 'Nama Lengkap']);
+            const kelas = getCleanValue(row, ['Kelas', 'kelas']);
 
-          // Validasi ketat agar tidak lolos jika kosong atau bernilai string 'undefined'
-          if (nis && nama && kelas && nis !== 'undefined' && nama !== 'undefined' && kelas !== 'undefined') {
-            try {
-              const email = `${nis}@sekolah.id`;
-              let uid = '';
+            if (nis && nama && kelas && nis !== 'undefined' && nama !== 'undefined' && kelas !== 'undefined') {
               try {
-                const cred = await createUserWithEmailAndPassword(secondaryAuth, email, 'siswa123');
-                uid = cred.user.uid;
-              } catch (authError) {
-                if (authError.code === 'auth/email-already-in-use') {
-                  const { signInWithEmailAndPassword, signOut } = await import('firebase/auth');
-                  try {
-                    const loginCred = await signInWithEmailAndPassword(secondaryAuth, email, 'siswa123');
-                    uid = loginCred.user.uid;
-                    await signOut(secondaryAuth);
-                  } catch (loginError) {
-                    throw { code: 'unrecoverable', message: 'NIS sudah terdaftar dengan password berbeda' }; // Lempar error jika gagal login
+                const email = `${nis}@sekolah.id`;
+                let uid = '';
+                try {
+                  const cred = await createUserWithEmailAndPassword(secondaryAuth, email, 'siswa123');
+                  uid = cred.user.uid;
+                } catch (authError) {
+                  if (authError.code === 'auth/email-already-in-use') {
+                    const { signInWithEmailAndPassword, signOut } = await import('firebase/auth');
+                    try {
+                      const loginCred = await signInWithEmailAndPassword(secondaryAuth, email, 'siswa123');
+                      uid = loginCred.user.uid;
+                      await signOut(secondaryAuth);
+                    } catch (loginError) {
+                      throw { code: 'unrecoverable', message: 'NIS sudah terdaftar dengan password berbeda' };
+                    }
+                  } else {
+                    throw authError;
                   }
-                } else {
-                  throw authError;
                 }
+                
+                await set(ref(db, `users/${uid}`), {
+                  uid: uid,
+                  nama_lengkap: nama,
+                  kelas: kelas,
+                  role: 'siswa',
+                  nis: nis,
+                  status: 'Aktif'
+                });
+                sukses++;
+              } catch(e) {
+                gagal++; 
+                gagalList.push(`${nama} (${nis}) - Error: ${e.code || e.message || 'Gagal menyimpan'}`);
               }
-              
-              await set(ref(db, `users/${uid}`), {
-                uid: uid,
-                nama_lengkap: nama,
-                kelas: kelas,
-                role: 'siswa',
-                nis: nis,
-                status: 'Aktif'
-              });
-              sukses++;
-            } catch(e) {
-              gagal++; 
-              gagalList.push(`${nama} (${nis}) - Error: ${e.code || e.message || 'Gagal menyimpan'}`);
+            } else {
+              gagal++;
+              gagalList.push(`Baris Kosong/Tidak Lengkap - NIS: ${nis||'-'}, Nama: ${nama||'-'}, Kelas: ${kelas||'-'}`);
             }
-          } else {
-            gagal++; // Hitung sebagai gagal jika ada data yang kosong
-            gagalList.push(`Baris Kosong/Tidak Lengkap - NIS: ${nis||'-'}, Nama: ${nama||'-'}, Kelas: ${kelas||'-'}`);
-          }
+          }));
         }
         
         let pesanHasil = `IMPORT EXCEL SELESAI!\n\n✅ Berhasil: ${sukses} siswa\n❌ Gagal: ${gagal} siswa\n\nPassword default: siswa123`;
