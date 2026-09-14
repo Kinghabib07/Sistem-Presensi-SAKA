@@ -71,14 +71,18 @@ export default function LaporanPresensi() {
     };
   }, []);
 
-  // Helper: Mendapatkan daftar tanggal dalam rentang 1 minggu ke belakang dari selectedDate
+  // Helper: Mendapatkan daftar tanggal dalam rentang 1 minggu ke belakang dari selectedDate (Tanpa Sabtu/Minggu)
   const getWeeklyDates = (dateStr) => {
     const dates = [];
     const curr = new Date(dateStr);
     for (let i = 6; i >= 0; i--) {
       const d = new Date(curr);
       d.setDate(d.getDate() - i);
-      dates.push(d.toISOString().split('T')[0]);
+      const day = d.getDay();
+      // 0 = Minggu, 6 = Sabtu. Kita hanya ambil hari kerja.
+      if (day !== 0 && day !== 6) {
+        dates.push(d.toISOString().split('T')[0]);
+      }
     }
     return dates;
   };
@@ -109,17 +113,26 @@ export default function LaporanPresensi() {
       return usersList.map(siswa => {
         let hadir = 0, terlambat = 0, tanpaKeterangan = 0;
         weekDates.forEach(date => {
-          const status = presensiRaw[date]?.[siswa.id]?.status;
-          if (status === 'Hadir') hadir++;
-          else if (status === 'Terlambat') terlambat++;
-          else tanpaKeterangan++;
+          // Hanya hitung jika pada hari tersebut ADA sesi presensi di database (Bukan libur/tanggal merah)
+          if (presensiRaw[date]) {
+            const status = presensiRaw[date][siswa.id]?.status;
+            if (status === 'Hadir') hadir++;
+            else if (status === 'Terlambat') terlambat++;
+            else tanpaKeterangan++;
+          }
         });
+        
+        // Tampilkan periode awal s/d akhir dari hari yang valid (Senin - Jumat)
+        const periodeStr = weekDates.length > 0 
+          ? `${weekDates[0]} s/d ${weekDates[weekDates.length - 1]}` 
+          : '-';
+
         return {
           uid: siswa.id,
           nis: siswa.nis || '-',
           nama_lengkap: siswa.nama_lengkap || 'Tanpa Nama',
           kelas: siswa.kelas || '-',
-          periode: `${weekDates[0]} s/d ${weekDates[weekDates.length - 1]}`,
+          periode: periodeStr,
           hadir,
           terlambat,
           tanpaKeterangan,
@@ -129,12 +142,17 @@ export default function LaporanPresensi() {
     } 
     
     else if (modeRekap === 'bulanan') {
-      // Menyaring tanggal-tanggal yang berawalan YYYY-MM
-      const monthlyDates = Object.keys(presensiRaw).filter(date => date.startsWith(selectedMonth));
+      // Menyaring tanggal yang berawalan YYYY-MM dan BUKAN hari Sabtu/Minggu
+      const monthlyDates = Object.keys(presensiRaw).filter(date => {
+        if (!date.startsWith(selectedMonth)) return false;
+        const d = new Date(date);
+        const day = d.getDay();
+        return day !== 0 && day !== 6; // Filter Weekend
+      });
+
       return usersList.map(siswa => {
         let hadir = 0, terlambat = 0, tanpaKeterangan = 0;
         
-        // Untuk bulanan, kita hitung akumulasi dari semua tanggal di bulan tersebut yang tercatat di DB
         monthlyDates.forEach(date => {
           const status = presensiRaw[date]?.[siswa.id]?.status;
           if (status === 'Hadir') hadir++;
